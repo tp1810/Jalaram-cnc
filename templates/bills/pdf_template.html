@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+    @page {
+        size: A4;
+        margin: 1.8cm 2cm;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 11px;
+        color: #1a1a2e;
+        line-height: 1.5;
+    }
+
+    /* ── Header ── */
+    .header {
+        border-bottom: 3px solid #1a1a2e;
+        padding-bottom: 12px;
+        margin-bottom: 18px;
+    }
+    .header-inner {
+        display: table;
+        width: 100%;
+    }
+    .header-left {
+        display: table-cell;
+        vertical-align: middle;
+        width: 65%;
+    }
+    .header-right {
+        display: table-cell;
+        vertical-align: middle;
+        text-align: right;
+        width: 35%;
+    }
+    .business-name {
+        font-size: 22px;
+        font-weight: bold;
+        color: #1a1a2e;
+        letter-spacing: 0.5px;
+    }
+    .business-tagline {
+        font-size: 10px;
+        color: #555;
+        margin-top: 2px;
+    }
+    .invoice-label {
+        font-size: 20px;
+        font-weight: bold;
+        color: #e07b00;
+        letter-spacing: 2px;
+    }
+    .invoice-number {
+        font-size: 13px;
+        font-weight: bold;
+        margin-top: 4px;
+    }
+
+    /* ── Bill Meta (customer + date) ── */
+    .meta-table {
+        display: table;
+        width: 100%;
+        margin-bottom: 18px;
+    }
+    .meta-left {
+        display: table-cell;
+        width: 55%;
+        vertical-align: top;
+    }
+    .meta-right {
+        display: table-cell;
+        width: 45%;
+        vertical-align: top;
+        text-align: right;
+    }
+    .meta-box {
+        background: #f4f6fb;
+        border-left: 3px solid #1a1a2e;
+        padding: 10px 14px;
+        border-radius: 2px;
+        display: inline-block;
+        width: 100%;
+    }
+    .meta-box-right {
+        background: #fff8ee;
+        border-left: 3px solid #e07b00;
+        padding: 10px 14px;
+        border-radius: 2px;
+        display: inline-block;
+        width: 100%;
+        text-align: left;
+    }
+    .meta-title {
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #888;
+        margin-bottom: 4px;
+    }
+    .meta-value {
+        font-size: 12px;
+        font-weight: bold;
+    }
+    .meta-sub {
+        font-size: 10px;
+        color: #555;
+    }
+
+    /* ── Items Table ── */
+    .items-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 16px;
+    }
+    .items-table thead tr {
+        background-color: #1a1a2e;
+        color: #ffffff;
+    }
+    .items-table thead th {
+        padding: 8px 10px;
+        font-size: 10px;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .items-table tbody td {
+        padding: 8px 10px;
+        border-bottom: 1px solid #e8e8e8;
+        vertical-align: middle;
+    }
+    .items-table tbody tr:nth-child(even) td {
+        background-color: #fafafa;
+    }
+    .items-table .col-num    { width: 6%; text-align: center; color: #888; }
+    .items-table .col-desc   { width: 40%; }
+    .items-table .col-size   { width: 26%; }
+    .items-table .col-amount { width: 28%; text-align: right; font-weight: bold; }
+    .size-badge {
+        background: #eef0f5;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 10px;
+        font-weight: bold;
+    }
+
+    /* ── Totals ── */
+    .totals-wrapper {
+        display: table;
+        width: 100%;
+        margin-top: 8px;
+    }
+    .totals-spacer { display: table-cell; width: 55%; }
+    .totals-box    { display: table-cell; width: 45%; vertical-align: top; }
+
+    .totals-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .totals-table td {
+        padding: 5px 10px;
+        font-size: 11px;
+    }
+    .totals-table .label-col { color: #555; }
+    .totals-table .value-col { text-align: right; font-weight: bold; }
+    .totals-divider td { border-top: 1px solid #ccc; }
+    .total-final td {
+        background: #1a1a2e;
+        color: #ffffff;
+        font-size: 13px;
+        font-weight: bold;
+        padding: 8px 10px;
+    }
+    .total-final .value-col { text-align: right; }
+
+    /* ── Notes ── */
+    .notes-section {
+        margin-top: 18px;
+        padding: 8px 12px;
+        background: #fffde7;
+        border-left: 3px solid #f9a825;
+        border-radius: 2px;
+        font-size: 10px;
+        color: #555;
+    }
+
+    /* ── Footer ── */
+    .footer {
+        margin-top: 28px;
+        padding-top: 10px;
+        border-top: 1px solid #ddd;
+        text-align: center;
+        font-size: 9px;
+        color: #999;
+    }
+    .footer-thanks {
+        font-size: 11px;
+        font-weight: bold;
+        color: #1a1a2e;
+        margin-bottom: 4px;
+    }
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<div class="header">
+    <div class="header-inner">
+        <div class="header-left">
+            <div class="business-name">Jalaram CNC Art &amp; Craft</div>
+            <div class="business-tagline">Quality in every cut &bull; Ahmedabad, Gujarat</div>
+        </div>
+        <div class="header-right">
+            <div class="invoice-label">INVOICE</div>
+            <div class="invoice-number">{{ bill.bill_number }}</div>
+            <div style="font-size:10px; color:#555; margin-top:4px;">
+                Date: {{ bill.created_at|date:"d M Y" }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── BILL TO + BILL INFO ── -->
+<div class="meta-table">
+    <div class="meta-left" style="padding-right:12px;">
+        <div class="meta-box">
+            <div class="meta-title">Bill To</div>
+            <div class="meta-value">{{ bill.customer_name }}</div>
+            <div class="meta-sub">
+                Phone: {{ bill.customer_phone }}<br>
+                City: {{ bill.customer_city }}
+            </div>
+        </div>
+    </div>
+    <div class="meta-right">
+        <div class="meta-box-right">
+            <div class="meta-title">Payment Info</div>
+            <div class="meta-sub" style="margin-top:2px;">
+                Tax Rate: <strong>{{ bill.tax_rate }}%</strong><br>
+                Items: <strong>{{ bill.items.count }}</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── ITEMS TABLE ── -->
+<table class="items-table">
+    <thead>
+        <tr>
+            <th class="col-num">#</th>
+            <th class="col-desc">Description</th>
+            <th class="col-size">Size</th>
+            <th class="col-amount">Amount (&#8377;)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in bill.items.all %}
+        <tr>
+            <td class="col-num">{{ forloop.counter }}</td>
+            <td class="col-desc">{{ item.description|default:"CNC Art &amp; Craft Product" }}</td>
+            <td class="col-size">
+                <span class="size-badge">{{ item.size }}</span>
+            </td>
+            <td class="col-amount">&#8377;{{ item.amount }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- ── TOTALS ── -->
+<div class="totals-wrapper">
+    <div class="totals-spacer"></div>
+    <div class="totals-box">
+        <table class="totals-table">
+            <tr>
+                <td class="label-col">Subtotal</td>
+                <td class="value-col">&#8377;{{ bill.subtotal }}</td>
+            </tr>
+            <tr>
+                <td class="label-col">Tax @ {{ bill.tax_rate }}%</td>
+                <td class="value-col">&#8377;{{ bill.tax_amount }}</td>
+            </tr>
+            <tr class="totals-divider"><td colspan="2"></td></tr>
+            <tr class="total-final">
+                <td class="label-col">Total Payable</td>
+                <td class="value-col">&#8377;{{ bill.total }}</td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<!-- ── NOTES ── -->
+{% if bill.notes %}
+<div class="notes-section">
+    <strong>Notes:</strong> {{ bill.notes }}
+</div>
+{% endif %}
+
+<!-- ── FOOTER ── -->
+<div class="footer">
+    <div class="footer-thanks">Thank you for your business!</div>
+    Jalaram CNC Art &amp; Craft &mdash; This is a computer-generated invoice.
+</div>
+
+</body>
+</html>

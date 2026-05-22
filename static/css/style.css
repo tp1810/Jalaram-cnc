@@ -1,0 +1,598 @@
+/* ─────────────────────────────────────────────────────
+   Jalaram CNC Art & Craft — Main Stylesheet
+   ───────────────────────────────────────────────────── */
+
+:root {
+    --sidebar-w: 240px;
+    --sidebar-collapsed-w: 60px;
+    --topbar-h: 60px;
+    --navy: #1a1a2e;
+    --navy-hover: #16213e;
+    --accent: #e07b00;
+    --accent-light: #fff3e0;
+    --sidebar-text: #b0bec5;
+    --sidebar-active: #ffffff;
+    --bg: #f0f2f7;
+    --card-radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,.08);
+    --transition: .2s ease;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: #1a1a2e;
+    overflow-x: hidden;
+    margin: 0;
+}
+
+/* ── Utility ─────────────────────────────────────────── */
+.fw-500 { font-weight: 500; }
+.fw-600 { font-weight: 600; }
+.fw-700 { font-weight: 700; }
+
+/* ── SIDEBAR ─────────────────────────────────────────── */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: var(--sidebar-w);
+    background: var(--navy);
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+    transition: width var(--transition);
+    overflow: hidden;
+}
+
+.sidebar.collapsed {
+    width: var(--sidebar-collapsed-w);
+}
+
+/* Brand */
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 16px 20px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    white-space: nowrap;
+    overflow: hidden;
+    min-height: var(--topbar-h);
+}
+
+.brand-icon {
+    width: 36px;
+    height: 36px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.brand-text {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.brand-main {
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+    white-space: nowrap;
+}
+
+.brand-sub {
+    font-size: 10px;
+    color: var(--sidebar-text);
+    white-space: nowrap;
+}
+
+/* Nav */
+.sidebar-nav {
+    flex: 1;
+    padding: 12px 8px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.nav-section-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: rgba(176,190,197,.5);
+    padding: 12px 10px 4px;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    color: var(--sidebar-text);
+    text-decoration: none;
+    font-size: 13.5px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    transition: background var(--transition), color var(--transition);
+    margin-bottom: 2px;
+}
+
+.nav-item i {
+    font-size: 16px;
+    flex-shrink: 0;
+    width: 20px;
+    text-align: center;
+}
+
+.nav-item:hover {
+    background: rgba(255,255,255,.08);
+    color: white;
+}
+
+.nav-item.active {
+    background: var(--accent);
+    color: white;
+}
+
+/* Footer */
+.sidebar-footer {
+    padding: 12px 16px;
+    font-size: 10px;
+    color: rgba(176,190,197,.5);
+    border-top: 1px solid rgba(255,255,255,.06);
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+/* Collapsed sidebar — hide text */
+.sidebar.collapsed .brand-text,
+.sidebar.collapsed .nav-item span,
+.sidebar.collapsed .nav-section-label,
+.sidebar.collapsed .sidebar-footer span {
+    display: none;
+}
+
+.sidebar.collapsed .nav-item {
+    justify-content: center;
+    padding: 10px;
+}
+
+.sidebar.collapsed .sidebar-brand {
+    justify-content: center;
+    padding: 20px 12px;
+}
+
+/* ── MAIN WRAPPER ─────────────────────────────────────── */
+.main-wrapper {
+    margin-left: var(--sidebar-w);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    transition: margin-left var(--transition);
+}
+
+.main-wrapper.expanded {
+    margin-left: var(--sidebar-collapsed-w);
+}
+
+/* ── TOPBAR ─────────────────────────────────────────── */
+.topbar {
+    height: var(--topbar-h);
+    background: white;
+    border-bottom: 1px solid #e8eaf0;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 24px;
+    position: sticky;
+    top: 0;
+    z-index: 900;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+
+.sidebar-toggle {
+    background: none;
+    border: none;
+    color: #555;
+    font-size: 22px;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    transition: background var(--transition);
+}
+
+.sidebar-toggle:hover {
+    background: var(--bg);
+}
+
+.topbar-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--navy);
+}
+
+.topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.topbar-date {
+    font-size: 12px;
+    color: #888;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* ── MESSAGES ─────────────────────────────────────────── */
+.messages-container {
+    padding: 12px 24px 0;
+}
+
+.alert-custom {
+    border-radius: 10px;
+    font-size: 13.5px;
+    border: none;
+}
+
+/* ── PAGE CONTENT ─────────────────────────────────────── */
+.page-content {
+    padding: 24px;
+    flex: 1;
+}
+
+/* ── PAGE TOOLBAR ─────────────────────────────────────── */
+.page-toolbar {
+    /* spacing handled by mb classes on template */
+}
+
+.search-form .input-group {
+    max-width: 340px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #dee2e6;
+}
+
+.search-form .input-group-text,
+.search-form .form-control {
+    border: none;
+    background: white;
+    font-size: 13.5px;
+}
+
+.search-form .form-control:focus {
+    box-shadow: none;
+}
+
+/* ── STAT CARDS ─────────────────────────────────────────── */
+.stat-card {
+    background: white;
+    border-radius: var(--card-radius);
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: var(--shadow);
+    border-left: 4px solid transparent;
+}
+
+.stat-blue   { border-left-color: #2563eb; }
+.stat-orange { border-left-color: var(--accent); }
+.stat-green  { border-left-color: #16a34a; }
+.stat-purple { border-left-color: #7c3aed; }
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+}
+
+.stat-blue .stat-icon   { background: #eff6ff; color: #2563eb; }
+.stat-orange .stat-icon { background: var(--accent-light); color: var(--accent); }
+.stat-green .stat-icon  { background: #f0fdf4; color: #16a34a; }
+.stat-purple .stat-icon { background: #f5f3ff; color: #7c3aed; }
+
+.stat-value {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #888;
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+/* ── CARDS ─────────────────────────────────────────────── */
+.card-custom {
+    background: white;
+    border-radius: var(--card-radius);
+    border: none;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.card-header-custom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid #f0f2f7;
+    background: white;
+}
+
+.card-title-custom {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--navy);
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+/* ── TABLES ─────────────────────────────────────────────── */
+.table-custom thead th {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #888;
+    background: #f8f9fc;
+    border-bottom: 1px solid #e8eaf0;
+    padding: 10px 16px;
+    white-space: nowrap;
+}
+
+.table-custom tbody td {
+    padding: 12px 16px;
+    vertical-align: middle;
+    font-size: 13.5px;
+    border-bottom: 1px solid #f0f2f7;
+}
+
+.table-custom tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.table-custom tbody tr:hover td {
+    background: #fafbff;
+}
+
+/* ── BADGES ─────────────────────────────────────────────── */
+.badge-bill {
+    display: inline-block;
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.badge-bill.lg {
+    font-size: 16px;
+    padding: 6px 14px;
+}
+
+/* ── CUSTOMER AVATAR ─────────────────────────────────────── */
+.customer-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: white;
+    font-weight: 700;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.customer-avatar.sm { width: 28px; height: 28px; font-size: 12px; }
+.customer-avatar.xl { width: 64px; height: 64px; font-size: 26px; }
+
+/* ── CUSTOMER LIST (dashboard) ────────────────────────── */
+.customer-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.customer-list-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    border-bottom: 1px solid #f0f2f7;
+}
+
+.customer-list-item:last-child {
+    border-bottom: none;
+}
+
+.customer-info {
+    flex: 1;
+    min-width: 0;
+}
+
+/* ── DETAIL LIST ─────────────────────────────────────── */
+.detail-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.detail-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 0;
+    border-bottom: 1px solid #f0f2f7;
+    font-size: 13.5px;
+}
+
+.detail-list li:last-child { border-bottom: none; }
+
+.detail-label {
+    color: #888;
+    font-size: 12px;
+}
+
+.detail-value {
+    font-weight: 500;
+    text-align: right;
+}
+
+/* ── BILL SUMMARY BOX ────────────────────────────────── */
+.summary-box {
+    background: #f8f9fc;
+    border-radius: 10px;
+    padding: 14px;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    font-size: 13.5px;
+    color: #444;
+}
+
+.summary-row.total-row {
+    border-top: 2px solid #e0e4ee;
+    margin-top: 6px;
+    padding-top: 10px;
+}
+
+/* ── ITEMS TABLE (bill form) ─────────────────────────── */
+.items-table thead th {
+    background: #f0f2f7;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #666;
+    padding: 10px 12px;
+    border-bottom: 1px solid #e0e4ee;
+}
+
+.items-table tbody td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #f0f2f7;
+    vertical-align: middle;
+}
+
+/* ── EMPTY STATE ─────────────────────────────────────── */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #aaa;
+}
+
+.empty-state i {
+    font-size: 40px;
+    display: block;
+    margin-bottom: 12px;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 14px;
+}
+
+/* ── FORM CONTROLS ───────────────────────────────────── */
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(224,123,0,.15);
+}
+
+.form-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+/* ── BUTTONS ─────────────────────────────────────────── */
+.btn-xs {
+    padding: 3px 7px;
+    font-size: 12px;
+    border-radius: 5px;
+}
+
+.btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background: #c96e00;
+    border-color: #c96e00;
+}
+
+.btn-outline-primary {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.btn-outline-primary:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+/* ── RESPONSIVE ──────────────────────────────────────── */
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+        width: var(--sidebar-w) !important;
+    }
+    .sidebar.mobile-open {
+        transform: translateX(0);
+    }
+    .main-wrapper {
+        margin-left: 0 !important;
+    }
+    .page-content {
+        padding: 16px;
+    }
+    .stat-card {
+        padding: 14px;
+    }
+    .stat-value {
+        font-size: 20px;
+    }
+    .topbar-date {
+        display: none;
+    }
+}

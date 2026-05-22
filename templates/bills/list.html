@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block title %}Bills — Jalaram CNC{% endblock %}
+{% block page_heading %}Bills{% endblock %}
+
+{% block content %}
+
+<div class="page-toolbar mb-4">
+    <div class="d-flex align-items-center gap-3 flex-wrap">
+        <form method="get" class="search-form">
+            <div class="input-group">
+                <span class="input-group-text bg-white border-end-0">
+                    <i class="bi bi-search text-muted"></i>
+                </span>
+                <input type="text" name="q" value="{{ query }}"
+                       class="form-control border-start-0 ps-0"
+                       placeholder="Search by bill #, name, phone or city…">
+                {% if query %}
+                <a href="{% url 'bill_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+                {% endif %}
+            </div>
+        </form>
+
+        <a href="{% url 'bill_create' %}" class="btn btn-primary ms-auto">
+            <i class="bi bi-plus-circle-fill me-1"></i> Create Bill
+        </a>
+    </div>
+</div>
+
+<div class="card card-custom">
+    <div class="card-header-custom">
+        <h6 class="card-title-custom">
+            <i class="bi bi-receipt-cutoff me-2"></i>All Bills
+            <span class="badge bg-primary ms-2">{{ bills|length }}</span>
+        </h6>
+    </div>
+    <div class="card-body p-0">
+        {% if bills %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 table-custom">
+                <thead>
+                    <tr>
+                        <th>Bill #</th>
+                        <th>Customer</th>
+                        <th>Phone</th>
+                        <th>City</th>
+                        <th>Items</th>
+                        <th class="text-end">Total</th>
+                        <th>Date</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for bill in bills %}
+                    <tr>
+                        <td><span class="badge-bill">{{ bill.bill_number }}</span></td>
+                        <td class="fw-500">{{ bill.customer_name }}</td>
+                        <td class="text-muted small">{{ bill.customer_phone }}</td>
+                        <td class="text-muted small">{{ bill.customer_city }}</td>
+                        <td>
+                            <span class="badge bg-light text-dark border">
+                                {{ bill.items.count }}
+                            </span>
+                        </td>
+                        <td class="text-end fw-600 text-success">₹{{ bill.total|floatformat:2 }}</td>
+                        <td class="text-muted small">{{ bill.created_at|date:"d M Y" }}</td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'bill_detail' bill.pk %}"
+                                   class="btn btn-outline-secondary" title="View">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'bill_pdf' bill.pk %}"
+                                   class="btn btn-outline-success" title="Download PDF">
+                                    <i class="bi bi-file-earmark-pdf"></i>
+                                </a>
+                                <form method="post" action="{% url 'bill_delete' bill.pk %}"
+                                      data-confirm-delete="bill {{ bill.bill_number }}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-danger" title="Delete">
+                                        <i class="bi bi-trash3"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state py-5">
+            <i class="bi bi-receipt fs-1 text-muted"></i>
+            <p class="mt-3 text-muted">
+                {% if query %}
+                    No bills found matching "<strong>{{ query }}</strong>".
+                {% else %}
+                    No bills yet. <a href="{% url 'bill_create' %}">Create the first bill!</a>
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

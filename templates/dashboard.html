@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard — Jalaram CNC{% endblock %}
+{% block page_heading %}Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- Stat Cards -->
+<div class="row g-4 mb-4">
+
+    <div class="col-6 col-xl-3">
+        <div class="stat-card stat-blue">
+            <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+            <div class="stat-body">
+                <div class="stat-value">{{ total_customers }}</div>
+                <div class="stat-label">Total Customers</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-xl-3">
+        <div class="stat-card stat-orange">
+            <div class="stat-icon"><i class="bi bi-receipt-cutoff"></i></div>
+            <div class="stat-body">
+                <div class="stat-value">{{ total_bills }}</div>
+                <div class="stat-label">Total Bills</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-xl-3">
+        <div class="stat-card stat-green">
+            <div class="stat-icon"><i class="bi bi-calendar-month"></i></div>
+            <div class="stat-body">
+                <div class="stat-value">{{ bills_this_month }}</div>
+                <div class="stat-label">Bills This Month</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-xl-3">
+        <div class="stat-card stat-purple">
+            <div class="stat-icon"><i class="bi bi-currency-rupee"></i></div>
+            <div class="stat-body">
+                <div class="stat-value">₹{{ total_revenue|floatformat:0 }}</div>
+                <div class="stat-label">Total Revenue</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Recent Bills + Recent Customers -->
+<div class="row g-4">
+
+    <!-- Recent Bills -->
+    <div class="col-lg-7">
+        <div class="card card-custom">
+            <div class="card-header-custom">
+                <h6 class="card-title-custom">
+                    <i class="bi bi-receipt me-2"></i>Recent Bills
+                </h6>
+                <a href="{% url 'bill_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_bills %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 table-custom">
+                        <thead>
+                            <tr>
+                                <th>Bill #</th>
+                                <th>Customer</th>
+                                <th>Date</th>
+                                <th class="text-end">Total</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for bill in recent_bills %}
+                            <tr>
+                                <td>
+                                    <span class="badge-bill">{{ bill.bill_number }}</span>
+                                </td>
+                                <td>
+                                    <div class="fw-500">{{ bill.customer_name }}</div>
+                                    <small class="text-muted">{{ bill.customer_city }}</small>
+                                </td>
+                                <td class="text-muted small">{{ bill.created_at|date:"d M Y" }}</td>
+                                <td class="text-end fw-600 text-success">₹{{ bill.total|floatformat:2 }}</td>
+                                <td class="text-end">
+                                    <a href="{% url 'bill_detail' bill.pk %}" class="btn btn-xs btn-outline-secondary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-receipt"></i>
+                    <p>No bills yet. <a href="{% url 'bill_create' %}">Create the first one!</a></p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Customers -->
+    <div class="col-lg-5">
+        <div class="card card-custom">
+            <div class="card-header-custom">
+                <h6 class="card-title-custom">
+                    <i class="bi bi-people me-2"></i>Recent Customers
+                </h6>
+                <a href="{% url 'customer_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_customers %}
+                <ul class="customer-list">
+                    {% for customer in recent_customers %}
+                    <li class="customer-list-item">
+                        <div class="customer-avatar">
+                            {{ customer.name|first|upper }}
+                        </div>
+                        <div class="customer-info">
+                            <div class="fw-500">{{ customer.name }}</div>
+                            <small class="text-muted">
+                                <i class="bi bi-telephone me-1"></i>{{ customer.phone_number }}
+                                &bull; {{ customer.city }}
+                            </small>
+                        </div>
+                        <a href="{% url 'customer_detail' customer.pk %}" class="btn btn-xs btn-outline-secondary">
+                            <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-people"></i>
+                    <p>No customers yet. <a href="{% url 'customer_create' %}">Add the first one!</a></p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

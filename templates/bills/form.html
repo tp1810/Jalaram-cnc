@@ -1,0 +1,329 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} — Jalaram CNC{% endblock %}
+{% block page_heading %}{{ title }}{% endblock %}
+
+{% block content %}
+
+<form method="post" id="bill-form" novalidate>
+    {% csrf_token %}
+
+    <div class="row g-4">
+
+        <!-- LEFT COLUMN -->
+        <div class="col-lg-8">
+
+            <!-- ── Customer Information ── -->
+            <div class="card card-custom mb-4">
+                <div class="card-header-custom">
+                    <h6 class="card-title-custom">
+                        <i class="bi bi-person-lines-fill me-2"></i>Customer Information
+                    </h6>
+                </div>
+                <div class="card-body">
+
+                    <!-- Select existing customer -->
+                    <div class="mb-3">
+                        <label class="form-label fw-500">
+                            {{ form.customer.label }}
+                        </label>
+                        {{ form.customer }}
+                        <div class="form-text">
+                            Select to auto-fill details below, or type manually.
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-5">
+                            <label class="form-label fw-500">
+                                {{ form.customer_name.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.customer_name }}
+                            {% if form.customer_name.errors %}
+                            <div class="invalid-feedback d-block">{{ form.customer_name.errors.as_text }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-500">
+                                {{ form.customer_phone.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.customer_phone }}
+                            {% if form.customer_phone.errors %}
+                            <div class="invalid-feedback d-block">{{ form.customer_phone.errors.as_text }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-500">
+                                {{ form.customer_city.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.customer_city }}
+                            {% if form.customer_city.errors %}
+                            <div class="invalid-feedback d-block">{{ form.customer_city.errors.as_text }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Bill Items ── -->
+            <div class="card card-custom">
+                <div class="card-header-custom">
+                    <h6 class="card-title-custom">
+                        <i class="bi bi-list-ul me-2"></i>Bill Items
+                    </h6>
+                    <button type="button" class="btn btn-sm btn-primary" id="add-item-btn">
+                        <i class="bi bi-plus-circle me-1"></i>Add Item
+                    </button>
+                </div>
+                <div class="card-body p-0">
+
+                    {{ formset.management_form }}
+
+                    {% if formset.non_form_errors %}
+                    <div class="alert alert-danger mx-3 mt-3">
+                        {{ formset.non_form_errors }}
+                    </div>
+                    {% endif %}
+
+                    <div class="table-responsive">
+                        <table class="table mb-0 items-table" id="items-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:35%">Description</th>
+                                    <th style="width:25%">Size <span class="text-danger">*</span></th>
+                                    <th style="width:20%">Amount (₹) <span class="text-danger">*</span></th>
+                                    <th style="width:10%" class="text-center">Remove</th>
+                                </tr>
+                            </thead>
+                            <tbody id="formset-body">
+                                {% for item_form in formset %}
+                                <tr class="item-row {% if item_form.DELETE.value %}d-none{% endif %}">
+                                    <td class="d-none">
+                                        {{ item_form.id }}
+                                        {{ item_form.DELETE }}
+                                    </td>
+                                    <td>
+                                        {{ item_form.description }}
+                                        {% if item_form.description.errors %}
+                                        <div class="text-danger small">{{ item_form.description.errors.as_text }}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ item_form.size }}
+                                        {% if item_form.size.errors %}
+                                        <div class="text-danger small">{{ item_form.size.errors.as_text }}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ item_form.amount }}
+                                        {% if item_form.amount.errors %}
+                                        <div class="text-danger small">{{ item_form.amount.errors.as_text }}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn"
+                                                title="Remove row">
+                                            <i class="bi bi-trash3"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+
+        </div><!-- /LEFT COLUMN -->
+
+        <!-- RIGHT COLUMN -->
+        <div class="col-lg-4">
+
+            <!-- ── Bill Summary ── -->
+            <div class="card card-custom mb-4 sticky-top" style="top:80px;">
+                <div class="card-header-custom">
+                    <h6 class="card-title-custom">
+                        <i class="bi bi-calculator me-2"></i>Bill Summary
+                    </h6>
+                </div>
+                <div class="card-body">
+
+                    <!-- Tax Rate -->
+                    <div class="mb-4">
+                        <label class="form-label fw-500">{{ form.tax_rate.label }}</label>
+                        <div class="input-group">
+                            {{ form.tax_rate }}
+                            <span class="input-group-text">%</span>
+                        </div>
+                        {% if form.tax_rate.errors %}
+                        <div class="invalid-feedback d-block">{{ form.tax_rate.errors.as_text }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Totals display -->
+                    <div class="summary-box">
+                        <div class="summary-row">
+                            <span>Subtotal</span>
+                            <span id="summary-subtotal" class="fw-500">₹0.00</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Tax (<span id="tax-rate-label">0.00</span>%)</span>
+                            <span id="summary-tax" class="text-muted">₹0.00</span>
+                        </div>
+                        <div class="summary-row total-row">
+                            <span class="fw-600">Total Payable</span>
+                            <span id="summary-total" class="fw-700 text-success fs-5">₹0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="mt-4">
+                        <label class="form-label fw-500">{{ form.notes.label }}</label>
+                        {{ form.notes }}
+                    </div>
+
+                    <!-- Submit -->
+                    <div class="d-grid mt-4 gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-check-circle me-1"></i>{{ button_text }}
+                        </button>
+                        <a href="{% url 'bill_list' %}" class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+
+        </div><!-- /RIGHT COLUMN -->
+
+    </div>
+</form>
+
+<!-- Customer data for JS auto-fill -->
+{{ customers_json|json_script:"customer-data" }}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    // ── Customer auto-fill ──────────────────────────────────────────
+    const customerData = JSON.parse(
+        document.getElementById('customer-data').textContent
+    );
+
+    document.getElementById('id_customer').addEventListener('change', function () {
+        const id = this.value;
+        if (id && customerData[id]) {
+            const c = customerData[id];
+            document.getElementById('id_customer_name').value = c.name;
+            document.getElementById('id_customer_phone').value = c.phone;
+            document.getElementById('id_customer_city').value = c.city;
+        }
+    });
+
+    // ── Formset management ──────────────────────────────────────────
+    const getTotalForms = () =>
+        parseInt(document.getElementById('id_items-TOTAL_FORMS').value, 10);
+    const setTotalForms = (n) =>
+        (document.getElementById('id_items-TOTAL_FORMS').value = n);
+
+    document.getElementById('add-item-btn').addEventListener('click', function () {
+        const index = getTotalForms();
+        const row = buildRow(index);
+        document.getElementById('formset-body').appendChild(row);
+        setTotalForms(index + 1);
+        row.querySelector('.item-amount').addEventListener('input', updateSummary);
+    });
+
+    function buildRow(index) {
+        const tr = document.createElement('tr');
+        tr.className = 'item-row';
+        tr.innerHTML = `
+            <td class="d-none">
+                <input type="checkbox" name="items-${index}-DELETE" id="id_items-${index}-DELETE">
+            </td>
+            <td>
+                <input type="text" name="items-${index}-description"
+                       class="form-control form-control-sm"
+                       placeholder="Product description (optional)">
+            </td>
+            <td>
+                <input type="text" name="items-${index}-size"
+                       class="form-control form-control-sm item-size"
+                       placeholder="e.g. 12×18 inch">
+            </td>
+            <td>
+                <input type="number" name="items-${index}-amount"
+                       class="form-control form-control-sm item-amount"
+                       step="0.01" min="0" placeholder="0.00">
+            </td>
+            <td class="text-center">
+                <button type="button"
+                        class="btn btn-sm btn-outline-danger remove-item-btn"
+                        title="Remove row">
+                    <i class="bi bi-trash3"></i>
+                </button>
+            </td>
+        `;
+        tr.querySelector('.remove-item-btn').addEventListener('click', () => removeRow(tr));
+        return tr;
+    }
+
+    function removeRow(row) {
+        const deleteInput = row.querySelector('input[name$="-DELETE"]');
+        if (deleteInput) {
+            deleteInput.checked = true;
+            row.style.display = 'none';
+        } else {
+            row.remove();
+        }
+        updateSummary();
+    }
+
+    // Attach remove listeners to rows rendered by Django
+    document.querySelectorAll('#formset-body .remove-item-btn').forEach(btn => {
+        btn.addEventListener('click', () => removeRow(btn.closest('tr')));
+    });
+
+    // Attach amount listeners to existing rows
+    document.querySelectorAll('#formset-body .item-amount').forEach(input => {
+        input.addEventListener('input', updateSummary);
+    });
+
+    // ── Live summary calculation ────────────────────────────────────
+    function fmt(n) {
+        return '₹' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    function updateSummary() {
+        let subtotal = 0;
+        document.querySelectorAll('#formset-body .item-row').forEach(row => {
+            if (row.style.display === 'none') return;
+            const amtInput = row.querySelector('.item-amount');
+            if (amtInput) subtotal += parseFloat(amtInput.value) || 0;
+        });
+
+        const taxRate = parseFloat(document.getElementById('id_tax_rate').value) || 0;
+        const taxAmt  = subtotal * taxRate / 100;
+        const total   = subtotal + taxAmt;
+
+        document.getElementById('summary-subtotal').textContent = fmt(subtotal);
+        document.getElementById('summary-tax').textContent      = fmt(taxAmt);
+        document.getElementById('summary-total').textContent    = fmt(total);
+        document.getElementById('tax-rate-label').textContent   = taxRate.toFixed(2);
+    }
+
+    document.getElementById('id_tax_rate').addEventListener('input', updateSummary);
+
+    updateSummary(); // initial run
+})();
+</script>
+{% endblock %}
