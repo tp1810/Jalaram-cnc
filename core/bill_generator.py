@@ -116,14 +116,8 @@ def generate_bill(bill) -> bytes:
     # ── M/s ROW ───────────────────────────────────────────────────────
     c.setFont("Helvetica-Bold", 10)
     c.setFillColor(dark)
-    ms_label  = "M/s  "
-    ms_lw     = c.stringWidth(ms_label,             "Helvetica-Bold", 10)
-    ms_name_w = c.stringWidth(bill.customer_name,   "Helvetica-Bold", 10)
+    ms_label = "Mr/Ms  "
     c.drawString(left, y, ms_label + bill.customer_name)
-    c.setLineWidth(0.5)
-    c.setStrokeColor(colors.HexColor("#aaaaaa"))
-    underline_x = left + ms_lw + ms_name_w + 2 * mm
-    c.line(underline_x, y - 0.8 * mm, right, y - 0.8 * mm)
     y -= 7 * mm
 
     # ── VILL / MO ROW ────────────────────────────────────────────────
@@ -131,19 +125,10 @@ def generate_bill(bill) -> bytes:
     c.setFillColor(dark)
     vill_label = "Vill.  "
     mo_label   = "Mo.  "
-    vill_lw    = c.stringWidth(vill_label,          "Helvetica-Bold", 10)
-    city_w     = c.stringWidth(bill.customer_city,  "Helvetica-Bold", 10)
-    mo_lw      = c.stringWidth(mo_label,            "Helvetica-Bold", 10)
-    number_w   = c.stringWidth(bill.customer_phone, "Helvetica-Bold", 10)
 
     mid = page_width / 2
     c.drawString(left, y, vill_label + bill.customer_city)
     c.drawString(mid + 2 * mm, y, mo_label + bill.customer_phone)
-
-    c.setLineWidth(0.5)
-    c.setStrokeColor(colors.HexColor("#aaaaaa"))
-    c.line(left + vill_lw + city_w + 2 * mm, y - 0.8 * mm, mid - 1 * mm, y - 0.8 * mm)
-    c.line(mid + 2 * mm + mo_lw + number_w + 2 * mm, y - 0.8 * mm, right, y - 0.8 * mm)
     y -= 7 * mm
 
     # ── ITEMS TABLE ───────────────────────────────────────────────────
