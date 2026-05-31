@@ -4,10 +4,9 @@ from django.contrib import messages
 from django.db import models as db_models
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.template.loader import render_to_string
 from django.utils import timezone
-from xhtml2pdf import pisa
 
+from .bill_generator import generate_bill
 from .forms import BillForm, BillItemFormSet, CustomerForm
 from .models import Bill, BillItem, Customer
 
@@ -293,12 +292,10 @@ def customer_phone_lookup(request):
 
 def bill_pdf(request, pk):
     bill = get_object_or_404(Bill.objects.prefetch_related('items'), pk=pk)
-    html = render_to_string('bills/pdf_template.html', {'bill': bill}, request=request)
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="Bill-{bill.bill_number}.pdf"'
-    buffer = BytesIO()
-    pdf = pisa.CreatePDF(BytesIO(html.encode('UTF-8')), dest=buffer)
-    if pdf.err:
-        return HttpResponse('Error generating PDF. Please try again.', status=500)
-    response.write(buffer.getvalue())
+    try:
+        pdf_bytes = generate_bill(bill)
+    except Exception as e:
+        return HttpResponse(f'Error generating PDF: {e}', status=500)
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="Bill-{bill.bill_number}.pdf"'
     return response
