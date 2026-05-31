@@ -29,7 +29,8 @@
                         </label>
                         {{ form.customer }}
                         <div class="form-text">
-                            Select to auto-fill details below, or type manually.
+                            <i class="bi bi-info-circle me-1"></i>
+                            Select from the list <strong>or</strong> type phone below to auto-find, or fill manually for a new customer.
                         </div>
                     </div>
 
@@ -53,18 +54,17 @@
                             {% if form.customer_phone.errors %}
                             <div class="invalid-feedback d-block">{{ form.customer_phone.errors.as_text }}</div>
                             {% endif %}
+                            <div id="phone-hint" class="form-text text-muted">Type phone to auto-find customer.</div>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-500">
                                 {{ form.customer_city.label }}
-                                <span class="text-danger">*</span>
                             </label>
                             {{ form.customer_city }}
                             {% if form.customer_city.errors %}
                             <div class="invalid-feedback d-block">{{ form.customer_city.errors.as_text }}</div>
                             {% endif %}
-                        </div>
-                    </div>
+                        </div>                    </div>
                 </div>
             </div>
 
@@ -204,8 +204,8 @@
     </div>
 </form>
 
-<!-- Customer data for JS auto-fill -->
-{{ customers_json|json_script:"customer-data" }}
+<!-- Customer data for JS auto-fill (safe single-encoded JSON via json_script) -->
+{{ customers_dict|json_script:"customer-data" }}
 
 {% endblock %}
 
@@ -214,28 +214,81 @@
 (function () {
     'use strict';
 
-    // ── Customer auto-fill ──────────────────────────────────────────
-    const customerData = JSON.parse(
-        document.getElementById('customer-data').textContent
-    );
+    const $id = id => document.getElementById(id);
 
-    document.getElementById('id_customer').addEventListener('change', function () {
+    const elDropdown = $id('id_customer');
+    const elName     = $id('id_customer_name');
+    const elPhone    = $id('id_customer_phone');
+    const elCity     = $id('id_customer_city');
+    const elHint     = $id('phone-hint');
+
+    // Customer lookup dict — safely single-encoded via Django json_script
+    const customerData = JSON.parse($id('customer-data').textContent || '{}');
+
+    // ── Dropdown: auto-fill all 3 fields when a customer is selected ──
+    elDropdown.addEventListener('change', function () {
         const id = this.value;
         if (id && customerData[id]) {
             const c = customerData[id];
-            document.getElementById('id_customer_name').value = c.name;
-            document.getElementById('id_customer_phone').value = c.phone;
-            document.getElementById('id_customer_city').value = c.city;
+            elName.value  = c.name  || '';
+            elPhone.value = c.phone || '';
+            elCity.value  = c.city  || '';
+            setHint('Selected: ' + c.name + ' (' + c.phone + ')', 'text-success');
+        } else {
+            elName.value  = '';
+            elPhone.value = '';
+            elCity.value  = '';
+            setHint('Type phone number to auto-find an existing customer.', 'text-muted');
         }
     });
 
-    // ── Formset management ──────────────────────────────────────────
-    const getTotalForms = () =>
-        parseInt(document.getElementById('id_items-TOTAL_FORMS').value, 10);
-    const setTotalForms = (n) =>
-        (document.getElementById('id_items-TOTAL_FORMS').value = n);
+    // ── Phone debounce: lookup when typing manually (no dropdown selected) ──
+    let phoneTimer = null;
 
-    document.getElementById('add-item-btn').addEventListener('click', function () {
+    elPhone.addEventListener('input', function () {
+        clearTimeout(phoneTimer);
+        // If dropdown is already set, clear it — user is overriding
+        if (elDropdown.value) {
+            elDropdown.value = '';
+        }
+        const phone = this.value.trim();
+        if (phone.length < 10) {
+            setHint('Type phone number to auto-find an existing customer.', 'text-muted');
+            elPhone.classList.remove('is-valid');
+            return;
+        }
+        phoneTimer = setTimeout(() => {
+            fetch('/customers/phone-lookup/?phone=' + encodeURIComponent(phone))
+                .then(r => r.json())
+                .then(data => {
+                    if (data.found) {
+                        elName.value = data.name;
+                        elCity.value = data.city;
+                        elDropdown.value = String(data.id);
+                        elPhone.classList.add('is-valid');
+                        elPhone.classList.remove('is-invalid');
+                        setHint('\u2713 Existing customer: ' + data.name, 'text-success');
+                    } else {
+                        elDropdown.value = '';
+                        elPhone.classList.remove('is-valid');
+                        setHint('New customer \u2014 will be saved automatically.', 'text-muted');
+                    }
+                })
+                .catch(() => {});
+        }, 500);
+    });
+
+    function setHint(text, cls) {
+        if (!elHint) return;
+        elHint.textContent = text;
+        elHint.className = 'form-text ' + cls;
+    }
+
+    // ── Formset: add / remove rows ─────────────────────────────────
+    const getTotalForms = () => parseInt($id('id_items-TOTAL_FORMS').value, 10);
+    const setTotalForms = n  => { $id('id_items-TOTAL_FORMS').value = n; };
+
+    $id('add-item-btn').addEventListener('click', function () {
         const index = getTotalForms();
         const row = buildRow(index);
         document.getElementById('formset-body').appendChild(row);
@@ -258,7 +311,7 @@
             <td>
                 <input type="text" name="items-${index}-size"
                        class="form-control form-control-sm item-size"
-                       placeholder="e.g. 12×18 inch">
+                       placeholder="e.g. 12\u00d718 inch">
             </td>
             <td>
                 <input type="number" name="items-${index}-amount"
@@ -266,9 +319,7 @@
                        step="0.01" min="0" placeholder="0.00">
             </td>
             <td class="text-center">
-                <button type="button"
-                        class="btn btn-sm btn-outline-danger remove-item-btn"
-                        title="Remove row">
+                <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn" title="Remove">
                     <i class="bi bi-trash3"></i>
                 </button>
             </td>
@@ -278,52 +329,42 @@
     }
 
     function removeRow(row) {
-        const deleteInput = row.querySelector('input[name$="-DELETE"]');
-        if (deleteInput) {
-            deleteInput.checked = true;
-            row.style.display = 'none';
-        } else {
-            row.remove();
-        }
+        const del = row.querySelector('input[name$="-DELETE"]');
+        if (del) { del.checked = true; row.style.display = 'none'; }
+        else { row.remove(); }
         updateSummary();
     }
 
-    // Attach remove listeners to rows rendered by Django
-    document.querySelectorAll('#formset-body .remove-item-btn').forEach(btn => {
-        btn.addEventListener('click', () => removeRow(btn.closest('tr')));
-    });
+    document.querySelectorAll('#formset-body .remove-item-btn').forEach(btn =>
+        btn.addEventListener('click', () => removeRow(btn.closest('tr')))
+    );
+    document.querySelectorAll('#formset-body .item-amount').forEach(input =>
+        input.addEventListener('input', updateSummary)
+    );
 
-    // Attach amount listeners to existing rows
-    document.querySelectorAll('#formset-body .item-amount').forEach(input => {
-        input.addEventListener('input', updateSummary);
-    });
-
-    // ── Live summary calculation ────────────────────────────────────
+    // ── Live bill summary ──────────────────────────────────────────
     function fmt(n) {
-        return '₹' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return '\u20b9' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     }
 
     function updateSummary() {
         let subtotal = 0;
         document.querySelectorAll('#formset-body .item-row').forEach(row => {
             if (row.style.display === 'none') return;
-            const amtInput = row.querySelector('.item-amount');
-            if (amtInput) subtotal += parseFloat(amtInput.value) || 0;
+            const amt = row.querySelector('.item-amount');
+            if (amt) subtotal += parseFloat(amt.value) || 0;
         });
-
-        const taxRate = parseFloat(document.getElementById('id_tax_rate').value) || 0;
+        const taxRate = parseFloat($id('id_tax_rate').value) || 0;
         const taxAmt  = subtotal * taxRate / 100;
         const total   = subtotal + taxAmt;
-
-        document.getElementById('summary-subtotal').textContent = fmt(subtotal);
-        document.getElementById('summary-tax').textContent      = fmt(taxAmt);
-        document.getElementById('summary-total').textContent    = fmt(total);
-        document.getElementById('tax-rate-label').textContent   = taxRate.toFixed(2);
+        $id('summary-subtotal').textContent = fmt(subtotal);
+        $id('summary-tax').textContent      = fmt(taxAmt);
+        $id('summary-total').textContent    = fmt(total);
+        $id('tax-rate-label').textContent   = taxRate.toFixed(2);
     }
 
-    document.getElementById('id_tax_rate').addEventListener('input', updateSummary);
-
-    updateSummary(); // initial run
+    $id('id_tax_rate').addEventListener('input', updateSummary);
+    updateSummary();
 })();
 </script>
 {% endblock %}

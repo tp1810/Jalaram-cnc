@@ -1,11 +1,11 @@
 from django.db import models
-from django.utils import timezone
+from django.db.models import Max
 from decimal import Decimal
 
 
 class Customer(models.Model):
     name = models.CharField(max_length=200)
-    phone_number = models.CharField(max_length=15)
+    phone_number = models.CharField(max_length=15, unique=True)
     city = models.CharField(max_length=100)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -20,7 +20,7 @@ class Customer(models.Model):
 
 
 class Bill(models.Model):
-    bill_number = models.CharField(max_length=20, unique=True, editable=False)
+    bill_number = models.PositiveIntegerField(unique=True, editable=False, default=0)
     customer = models.ForeignKey(
         Customer,
         on_delete=models.SET_NULL,
@@ -33,7 +33,7 @@ class Bill(models.Model):
     customer_phone = models.CharField(max_length=15)
     customer_city = models.CharField(max_length=100)
     tax_rate = models.DecimalField(
-        max_digits=5, decimal_places=2, default=Decimal('18.00')
+        max_digits=5, decimal_places=2, default=Decimal('0.00')
     )
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -47,17 +47,9 @@ class Bill(models.Model):
         return f"Bill #{self.bill_number} — {self.customer_name}"
 
     def save(self, *args, **kwargs):
-        if not self.bill_number:
-            year = timezone.now().year
-            prefix = f'JCA-{year}-'
-            last_bill = (
-                Bill.objects
-                .filter(bill_number__startswith=prefix)
-                .order_by('-bill_number')
-                .first()
-            )
-            seq = int(last_bill.bill_number.split('-')[-1]) + 1 if last_bill else 1
-            self.bill_number = f'{prefix}{seq:04d}'
+        if not self.pk:  # only on creation
+            result = Bill.objects.aggregate(max_num=Max('bill_number'))
+            self.bill_number = (result['max_num'] or 0) + 1
         super().save(*args, **kwargs)
 
     @property

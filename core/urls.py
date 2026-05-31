@@ -8,6 +8,7 @@ urlpatterns = [
     # Customers
     path('customers/', views.customer_list, name='customer_list'),
     path('customers/add/', views.customer_create, name='customer_create'),
+    path('customers/phone-lookup/', views.customer_phone_lookup, name='customer_phone_lookup'),
     path('customers/<int:pk>/', views.customer_detail, name='customer_detail'),
     path('customers/<int:pk>/edit/', views.customer_update, name='customer_update'),
     path('customers/<int:pk>/delete/', views.customer_delete, name='customer_delete'),

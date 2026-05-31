@@ -78,7 +78,26 @@ class BillForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['customer'].required = False
-        self.fields['customer'].empty_label = '— Type new or select existing —'
+        self.fields['customer'].empty_label = '— Select existing customer (optional) —'
+        # City is optional (name + phone are always required)
+        self.fields['customer_city'].required = False
+
+    def clean(self):
+        cleaned = super().clean()
+        name = (cleaned.get('customer_name') or '').strip()
+        phone = (cleaned.get('customer_phone') or '').strip()
+        city = (cleaned.get('customer_city') or '').strip()
+
+        if not name:
+            self.add_error('customer_name', 'Customer name is required.')
+        if not phone:
+            self.add_error('customer_phone', 'Phone number is required.')
+
+        # Normalise stripped values back into cleaned data
+        cleaned['customer_name'] = name
+        cleaned['customer_phone'] = phone
+        cleaned['customer_city'] = city
+        return cleaned
 
 
 class BillItemForm(forms.ModelForm):
