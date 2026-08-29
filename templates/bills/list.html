@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Bills â€” Jalaram CNC{% endblock %}
+{% block title %}Bills — Jalaram CNC{% endblock %}
 {% block page_heading %}Bills{% endblock %}
 
 {% block content %}
@@ -68,7 +68,7 @@
                                 {{ bill.items.count }}
                             </span>
                         </td>
-                        <td class="text-end fw-600 text-success">â‚¹{{ bill.total }}</td>
+                        <td class="text-end fw-600 text-success">₹{{ bill.total }}</td>
                         <td>
                             {% if bill.is_paid %}
                                 <span class="badge bg-success">Paid</span>

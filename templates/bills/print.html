@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bill #{{ bill.bill_number }} â€” Jalaram CNC</title>
+    <title>Bill #{{ bill.bill_number }} — Jalaram CNC</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -163,7 +163,7 @@
 
 {% if not is_preview %}
 <div class="no-print">
-    <span class="np-title">Bill #{{ bill.bill_number }} â€” {{ bill.customer_name }}</span>
+    <span class="np-title">Bill #{{ bill.bill_number }} — {{ bill.customer_name }}</span>
     <button onclick="window.print()" class="np-btn np-btn-print">&#128424; Print</button>
     <button onclick="downloadPDF()" class="np-btn np-btn-download">&#11015; Download PDF</button>
     <a href="{% url 'bill_detail' bill.pk %}" class="np-btn np-btn-back">&#8592; Back</a>

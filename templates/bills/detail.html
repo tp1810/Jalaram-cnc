@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Bill #{{ bill.bill_number }} â€” Jalaram CNC{% endblock %}
+{% block title %}Bill #{{ bill.bill_number }} — Jalaram CNC{% endblock %}
 
 {% block content %}
 <style>
@@ -98,6 +98,15 @@
     border-radius: 6px; border: 1px solid #e0e0e0; display: block; margin: 0 auto 6px;
   }
   .inv-qr-label { font-size: 10px; font-weight: 700; color: #555; letter-spacing: 0.5px; }
+
+  @media print {
+    .sidebar, .topbar, .messages-container { display: none !important; }
+    .main-wrapper { margin-left: 0 !important; }
+    .page-content { padding: 0 !important; }
+    .d-flex.align-items-center.gap-2 { display: none !important; }
+    .inv-wrap { background: none !important; padding: 0 !important; border-radius: 0 !important; }
+    .inv-page { box-shadow: none !important; margin: 0 !important; width: 100% !important; }
+  }
 </style>
 
 <div class="container-fluid px-3 py-3">
@@ -113,7 +122,7 @@
     <button id="dl-btn" class="btn btn-primary btn-sm" onclick="downloadInvoicePDF()">
       <i class="bi bi-file-earmark-pdf"></i> Download PDF
     </button>
-    <button class="btn btn-info btn-sm text-white" onclick="printBill()">
+    <button class="btn btn-info btn-sm text-white" onclick="window.print()">
       <i class="bi bi-printer"></i> Print
     </button>
     <button class="btn btn-outline-secondary btn-sm" onclick="shareBill()">
@@ -287,39 +296,42 @@ function downloadInvoicePDF() {
   var btn = document.getElementById('dl-btn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Generating...';
-  var el = document.getElementById('inv-page-content');
-  var origShadow = el.style.boxShadow;
-  el.style.boxShadow = 'none';
-  html2pdf().set(pdfOpts('Bill-' + BILL_NUM + '.pdf'))
-    .from(el).save()
-    .then(function() {
-      el.style.boxShadow = origShadow;
-      btn.disabled = false;
-      btn.innerHTML = '<i class="bi bi-file-earmark-pdf"></i> Download PDF';
-    });
-}
-
-function printBill() {
-  var w = window.open('{% url "bill_print" bill.pk %}', '_blank', 'width=950,height=750');
-  if (w) { w.onload = function() { setTimeout(function() { w.print(); }, 400); }; }
+  var source = document.getElementById('inv-page-content');
+  var container = document.createElement('div');
+  container.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:white;z-index:-9999;';
+  var clone = source.cloneNode(true);
+  clone.style.boxShadow = 'none';
+  clone.style.margin = '0';
+  document.body.appendChild(container);
+  container.appendChild(clone);
+  html2pdf().set(pdfOpts('Bill-' + BILL_NUM + '.pdf')).from(clone).save().then(function() {
+    document.body.removeChild(container);
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-file-earmark-pdf"></i> Download PDF';
+  });
 }
 
 async function shareBill() {
-  var el = document.getElementById('inv-page-content');
-  var origShadow = el.style.boxShadow;
-  el.style.boxShadow = 'none';
+  var source = document.getElementById('inv-page-content');
+  var container = document.createElement('div');
+  container.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:white;z-index:-9999;';
+  var clone = source.cloneNode(true);
+  clone.style.boxShadow = 'none';
+  clone.style.margin = '0';
+  document.body.appendChild(container);
+  container.appendChild(clone);
   try {
-    var blob = await html2pdf().set(pdfOpts('Bill-' + BILL_NUM + '.pdf')).from(el).outputPdf('blob');
-    el.style.boxShadow = origShadow;
+    var blob = await html2pdf().set(pdfOpts('Bill-' + BILL_NUM + '.pdf')).from(clone).outputPdf('blob');
+    document.body.removeChild(container);
     var file = new File([blob], 'Bill-' + BILL_NUM + '.pdf', { type: 'application/pdf' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({ files: [file], title: 'Bill #' + BILL_NUM });
     } else {
-      html2pdf().set(pdfOpts('Bill-' + BILL_NUM + '.pdf')).from(el).save();
+      downloadInvoicePDF();
     }
   } catch(e) {
-    el.style.boxShadow = origShadow;
-    html2pdf().set(pdfOpts('Bill-' + BILL_NUM + '.pdf')).from(el).save();
+    if (document.body.contains(container)) document.body.removeChild(container);
+    downloadInvoicePDF();
   }
 }
 </script>

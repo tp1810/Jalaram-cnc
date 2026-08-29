@@ -473,17 +473,6 @@ def bill_pdf(request, pk):
         return HttpResponse(f'Error generating PDF: {e}', status=500)
 
 
-def bill_print(request, pk):
-    """Display printable bill template"""
-    bill = get_object_or_404(Bill.objects.prefetch_related('items'), pk=pk)
-    is_preview = request.GET.get('preview') == '1'
-    return render(request, 'bills/print.html', {
-        'bill': bill,
-        'amount_words': _amount_words(bill.total),
-        'is_preview': is_preview,
-    })
-
-
 def live_search_bills(request):
     """Live search for bills (AJAX)"""
     query = request.GET.get('q', '').strip()

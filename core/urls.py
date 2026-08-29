@@ -25,5 +25,4 @@ urlpatterns = [
     path('bills/<int:pk>/edit/', views.bill_edit, name='bill_edit'),
     path('bills/<int:pk>/delete/', views.bill_delete, name='bill_delete'),
     path('bills/<int:pk>/pdf/', views.bill_pdf, name='bill_pdf'),
-    path('bills/<int:pk>/print/', views.bill_print, name='bill_print'),
 ]

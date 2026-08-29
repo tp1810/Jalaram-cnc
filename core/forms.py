@@ -97,9 +97,21 @@ class BillForm(forms.ModelForm):
         self.fields['customer'].required = False
         self.fields['customer'].empty_label = '— Select existing customer (optional) —'
         self.fields['customer_city'].required = False
+        self.fields['discount'].required = False
+        self.fields['extra_charges'].required = False
+        self.fields['paid_amount'].required = False
         # Show empty placeholder instead of 0 for new bills
         if not (kwargs.get('instance') and kwargs['instance'].pk):
             self.initial.update({'discount': '', 'extra_charges': '', 'paid_amount': ''})
+
+    def clean_discount(self):
+        return self.cleaned_data.get('discount') or 0
+
+    def clean_extra_charges(self):
+        return self.cleaned_data.get('extra_charges') or 0
+
+    def clean_paid_amount(self):
+        return self.cleaned_data.get('paid_amount') or 0
 
     def clean(self):
         cleaned = super().clean()

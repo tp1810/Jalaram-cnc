@@ -3,6 +3,10 @@
 {% block title %}{{ title }} — Jalaram CNC{% endblock %}
 {% block page_heading %}{{ title }}{% endblock %}
 
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+{% endblock %}
+
 {% block content %}
 
 <form method="post" id="bill-form" novalidate>
@@ -468,6 +472,21 @@
     $id('id_extra_charges')?.addEventListener('input', updateSummary);
     $id('id_paid_amount')?.addEventListener('input', updateSummary);
     updateSummary();
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script>
+(function() {
+    var ts = new TomSelect('#id_customer', {
+        allowEmptyOption: true,
+        placeholder: '— Search by name or phone —',
+        maxOptions: 50,
+        onChange: function(value) {
+            // fire native change so existing autofill logic picks it up
+            var sel = document.getElementById('id_customer');
+            sel.dispatchEvent(new Event('change'));
+        }
+    });
 })();
 </script>
 {% endblock %}

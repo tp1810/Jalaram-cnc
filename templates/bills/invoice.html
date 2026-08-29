@@ -462,7 +462,7 @@
       <div class="company-info">
         <h1>JALARAM CNC & LASER CUTTING</h1>
         <p>02, Samarth Square Complex</p>
-        <p>Modasa Road, Kapadwanj â€“ 387620</p>
+        <p>Modasa Road, Kapadwanj – 387620</p>
         <p>Contact: +91 7573855710</p>
         <p>+91 6351325475</p>
       </div>
@@ -509,7 +509,7 @@
         <th style="width:5%;">No.</th>
         <th style="width:40%;">Product Description</th>
         <th style="width:30%;">Size</th>
-        <th style="width:25%;">Amount (â‚¹)</th>
+        <th style="width:25%;">Amount (₹)</th>
       </tr>
     </thead>
     <tbody>
@@ -530,26 +530,26 @@
       <table class="totals-table">
         <tr class="sub-row">
           <td>Sub Total</td>
-          <td>â‚¹ {{ bill.subtotal }}</td>
+          <td>₹ {{ bill.subtotal }}</td>
         </tr>
         
         {% if bill.discount > 0 %}
         <tr>
           <td>Discount</td>
-          <td>-â‚¹ {{ bill.discount }}</td>
+          <td>-₹ {{ bill.discount }}</td>
         </tr>
         {% endif %}
 
         {% if bill.extra_charges > 0 %}
         <tr>
           <td>Extra Charges</td>
-          <td>+â‚¹ {{ bill.extra_charges }}</td>
+          <td>+₹ {{ bill.extra_charges }}</td>
         </tr>
         {% endif %}
 
         <tr class="total-row">
           <td>Total Amount</td>
-          <td>â‚¹ {{ bill.total }}</td>
+          <td>₹ {{ bill.total }}</td>
         </tr>
       </table>
 
@@ -558,14 +558,14 @@
         {% if bill.paid_amount > 0 %}
           <div class="payment-box {% if bill.is_paid %}paid{% elif bill.payment_status == 'Partial' %}partial{% endif %}">
             <div class="label">Advance Paid</div>
-            <div class="amount">â‚¹ {{ bill.paid_amount }}</div>
+            <div class="amount">₹ {{ bill.paid_amount }}</div>
           </div>
         {% endif %}
 
         {% if bill.due_amount > 0 %}
           <div class="payment-box due">
             <div class="label">Due Payment</div>
-            <div class="amount">â‚¹ {{ bill.due_amount }}</div>
+            <div class="amount">₹ {{ bill.due_amount }}</div>
           </div>
         {% endif %}
       </div>

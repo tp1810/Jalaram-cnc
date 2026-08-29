@@ -11,7 +11,7 @@
             <div class="card bg-danger text-white">
                 <div class="card-body">
                     <h6 class="card-title">Total Due</h6>
-                    <h3>â‚¹ {{ total_due }}</h3>
+                    <h3>₹ {{ total_due }}</h3>
                 </div>
             </div>
         </div>
@@ -38,16 +38,16 @@
                     <td><strong>#{{ bill.bill_number }}</strong></td>
                     <td>{{ bill.customer_name }}</td>
                     <td>{{ bill.customer_phone }}</td>
-                    <td>â‚¹ {{ bill.total }}</td>
+                    <td>₹ {{ bill.total }}</td>
                     <td>
                         {% if bill.paid_amount > 0 %}
-                            <span class="badge bg-success">â‚¹ {{ bill.paid_amount }}</span>
+                            <span class="badge bg-success">₹ {{ bill.paid_amount }}</span>
                         {% else %}
                             <span class="badge bg-warning">Not Paid</span>
                         {% endif %}
                     </td>
                     <td>
-                        <span class="badge bg-danger">â‚¹ {{ bill.due_amount }}</span>
+                        <span class="badge bg-danger">₹ {{ bill.due_amount }}</span>
                     </td>
                     <td>{{ bill.created_at|date:"d M, Y" }}</td>
                     <td>
