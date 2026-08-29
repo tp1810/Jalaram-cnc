@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>Unpaid Bills</h2>
+            <small class="text-muted">Sorted by due amount and date</small>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Total Due</h6>
+                    <h3>â‚¹ {{ total_due }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if bills %}
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Bill #</th>
+                    <th>Customer</th>
+                    <th>Phone</th>
+                    <th>Total Amount</th>
+                    <th>Paid Amount</th>
+                    <th>Due Amount</th>
+                    <th>Date</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for bill in bills %}
+                <tr>
+                    <td><strong>#{{ bill.bill_number }}</strong></td>
+                    <td>{{ bill.customer_name }}</td>
+                    <td>{{ bill.customer_phone }}</td>
+                    <td>â‚¹ {{ bill.total }}</td>
+                    <td>
+                        {% if bill.paid_amount > 0 %}
+                            <span class="badge bg-success">â‚¹ {{ bill.paid_amount }}</span>
+                        {% else %}
+                            <span class="badge bg-warning">Not Paid</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge bg-danger">â‚¹ {{ bill.due_amount }}</span>
+                    </td>
+                    <td>{{ bill.created_at|date:"d M, Y" }}</td>
+                    <td>
+                        <a href="{% url 'bill_detail' bill.pk %}" class="btn btn-sm btn-primary">View</a>
+                        <a href="{% url 'bill_edit' bill.pk %}" class="btn btn-sm btn-warning">Edit</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-success">
+        <h5>Great! No unpaid bills.</h5>
+        <p>All bills have been paid in full.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

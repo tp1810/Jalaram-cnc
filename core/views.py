@@ -1,14 +1,78 @@
+import base64
+import os
 from io import BytesIO
 
+from django.conf import settings as _settings
 from django.contrib import messages
 from django.db import models as db_models
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
 from django.utils import timezone
 
 from .bill_generator import generate_bill
 from .forms import BillForm, BillItemFormSet, CustomerForm
 from .models import Bill, BillItem, Customer
+
+
+# ─────────────────────── HELPERS ─────────────────────────────────
+
+def _image_b64(rel_static_path):
+    """Return a data-URI string for an image in the static folder (WeasyPrint-safe)."""
+    try:
+        full = os.path.join(_settings.BASE_DIR, 'static', rel_static_path)
+        with open(full, 'rb') as fh:
+            raw = base64.b64encode(fh.read()).decode('utf-8')
+        ext = rel_static_path.rsplit('.', 1)[-1].lower()
+        mime = 'jpeg' if ext in ('jpg', 'jpeg') else ext
+        return f'data:image/{mime};base64,{raw}'
+    except Exception:
+        return ''
+
+
+_ONES = [
+    '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven',
+    'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen',
+    'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen',
+]
+_TENS = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty',
+         'Seventy', 'Eighty', 'Ninety']
+
+
+def _n2w(n):
+    """Convert a non-negative integer to English words (Indian system)."""
+    n = int(n)
+    if n == 0:
+        return 'Zero'
+
+    def _two(x):
+        return _ONES[x] if x < 20 else _TENS[x // 10] + (' ' + _ONES[x % 10] if x % 10 else '')
+
+    def _three(x):
+        if x >= 100:
+            return _ONES[x // 100] + ' Hundred' + (' ' + _two(x % 100) if x % 100 else '')
+        return _two(x)
+
+    parts = []
+    for div, label in ((10_000_000, 'Crore'), (100_000, 'Lakh'), (1_000, 'Thousand')):
+        if n >= div:
+            parts.append(_three(n // div) + ' ' + label)
+            n %= div
+    if n:
+        parts.append(_three(n))
+    return ' '.join(parts)
+
+
+def _amount_words(amount):
+    """Return 'X Rupees and Y Paise Only' for a Decimal/float amount."""
+    from decimal import Decimal as D
+    amt = D(str(amount)).quantize(D('0.01'))
+    rupees = int(amt)
+    paise = int(round((amt - rupees) * 100))
+    words = _n2w(rupees) + ' Rupees'
+    if paise:
+        words += ' and ' + _n2w(paise) + ' Paise'
+    return words + ' Only'
 
 
 # ─────────────────────────── DASHBOARD ───────────────────────────
@@ -17,6 +81,7 @@ def dashboard(request):
     total_customers = Customer.objects.count()
     total_bills = Bill.objects.count()
 
+    # Get all bills this month with items
     now = timezone.now()
     bills_this_month = list(
         Bill.objects.filter(
@@ -26,8 +91,11 @@ def dashboard(request):
     )
     monthly_revenue = sum(b.total for b in bills_this_month)
 
-    all_bills = list(Bill.objects.prefetch_related('items'))
-    total_revenue = sum(b.total for b in all_bills)
+    # Get unpaid bills (where due_amount > 0)
+    all_bills = Bill.objects.prefetch_related('items').all()
+    unpaid_bills = [b for b in all_bills if b.due_amount > 0]
+    unpaid_bills_count = len(unpaid_bills)
+    total_due = sum(b.due_amount for b in unpaid_bills)
 
     recent_bills = Bill.objects.prefetch_related('items').order_by('-created_at')[:6]
     recent_customers = Customer.objects.order_by('-created_at')[:5]
@@ -36,7 +104,8 @@ def dashboard(request):
         'total_customers': total_customers,
         'total_bills': total_bills,
         'monthly_revenue': monthly_revenue,
-        'total_revenue': total_revenue,
+        'unpaid_bills_count': unpaid_bills_count,
+        'total_due': total_due,
         'bills_this_month': len(bills_this_month),
         'recent_bills': recent_bills,
         'recent_customers': recent_customers,
@@ -261,7 +330,10 @@ def bill_create(request):
 
 def bill_detail(request, pk):
     bill = get_object_or_404(Bill.objects.prefetch_related('items'), pk=pk)
-    return render(request, 'bills/detail.html', {'bill': bill})
+    return render(request, 'bills/detail.html', {
+        'bill': bill,
+        'amount_words': _amount_words(bill.total),
+    })
 
 
 def bill_delete(request, pk):
@@ -290,12 +362,170 @@ def customer_phone_lookup(request):
         return JsonResponse({'found': False})
 
 
+def bill_edit(request, pk):
+    """Edit an existing bill"""
+    bill = get_object_or_404(Bill, pk=pk)
+    if request.method == 'POST':
+        form = BillForm(request.POST, instance=bill)
+        formset = BillItemFormSet(request.POST, instance=bill)
+        if form.is_valid() and formset.is_valid():
+            form.save()
+            formset.save()
+            messages.success(request, f'Bill #{bill.bill_number} updated successfully!')
+            return redirect('bill_detail', pk=bill.pk)
+        messages.error(request, 'Please correct the errors highlighted below.')
+    else:
+        form = BillForm(instance=bill)
+        formset = BillItemFormSet(instance=bill)
+
+    return render(request, 'bills/form.html', {
+        'form': form,
+        'formset': formset,
+        'bill': bill,
+        'customers_dict': _customers_dict(),
+        'title': f'Edit Bill #{bill.bill_number}',
+        'button_text': 'Update Bill',
+        'is_edit': True,
+    })
+
+
+def unpaid_bills(request):
+    """List all unpaid bills sorted by due amount and date"""
+    # Get all bills with prefetch_related for efficiency
+    all_bills = Bill.objects.prefetch_related('items').all()
+    
+    # Filter bills where due_amount > 0
+    bills = [b for b in all_bills if b.due_amount > 0]
+    
+    # Sort by due amount (highest first) then by date
+    bills = sorted(bills, key=lambda b: (-float(b.due_amount), b.created_at))
+    
+    total_due = sum(b.due_amount for b in bills)
+
+    return render(request, 'bills/unpaid.html', {
+        'bills': bills,
+        'total_due': total_due,
+    })
+
+
+def monthly_revenue(request):
+    """Display monthly revenue breakdown"""
+    all_bills = Bill.objects.prefetch_related('items').order_by('-created_at')
+    
+    # Group bills by month
+    monthly_data = {}
+    total_revenue = 0
+    
+    for bill in all_bills:
+        month_key = bill.created_at.strftime('%Y-%m')
+        month_display = bill.created_at.strftime('%B %Y')
+        
+        if month_key not in monthly_data:
+            monthly_data[month_key] = {
+                'display': month_display,
+                'total': 0,
+                'bills': []
+            }
+        
+        monthly_data[month_key]['total'] += float(bill.total)
+        monthly_data[month_key]['bills'].append(bill)
+        total_revenue += float(bill.total)
+    
+    # Sort by month descending
+    monthly_list = sorted(monthly_data.items(), reverse=True)
+
+    return render(request, 'bills/monthly_revenue.html', {
+        'monthly_data': monthly_list,
+        'total_revenue': total_revenue,
+    })
+
+
 def bill_pdf(request, pk):
+    """Generate PDF bill using Playwright + Chromium"""
     bill = get_object_or_404(Bill.objects.prefetch_related('items'), pk=pk)
+
     try:
-        pdf_bytes = generate_bill(bill)
+        from playwright.sync_api import sync_playwright
+
+        html_string = render_to_string('bills/print.html', {
+            'bill': bill,
+            'amount_words': _amount_words(bill.total),
+            'is_preview': True,
+            'logo_b64': _image_b64('images/logo.jpeg'),
+            'qr_b64': _image_b64('images/qr_code.jpeg'),
+        }, request=request)
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            page.set_content(html_string, wait_until='load')
+            pdf_bytes = page.pdf(
+                format='A4',
+                print_background=True,
+                margin={'top': '0', 'right': '0', 'bottom': '0', 'left': '0'},
+            )
+            browser.close()
+
+        response = HttpResponse(pdf_bytes, content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="Bill-{bill.bill_number}.pdf"'
+        return response
     except Exception as e:
         return HttpResponse(f'Error generating PDF: {e}', status=500)
-    response = HttpResponse(pdf_bytes, content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="Bill-{bill.bill_number}.pdf"'
-    return response
+
+
+def bill_print(request, pk):
+    """Display printable bill template"""
+    bill = get_object_or_404(Bill.objects.prefetch_related('items'), pk=pk)
+    is_preview = request.GET.get('preview') == '1'
+    return render(request, 'bills/print.html', {
+        'bill': bill,
+        'amount_words': _amount_words(bill.total),
+        'is_preview': is_preview,
+    })
+
+
+def live_search_bills(request):
+    """Live search for bills (AJAX)"""
+    query = request.GET.get('q', '').strip()
+    if not query:
+        return JsonResponse({'results': []})
+    
+    bills = Bill.objects.prefetch_related('items').filter(
+        db_models.Q(customer_name__icontains=query)
+        | db_models.Q(customer_phone__icontains=query)
+    )
+    
+    if query.isdigit():
+        bills = bills | Bill.objects.filter(bill_number=int(query))
+    
+    results = [{
+        'id': bill.id,
+        'bill_number': bill.bill_number,
+        'customer_name': bill.customer_name,
+        'customer_phone': bill.customer_phone,
+        'total': float(bill.total),
+        'status': bill.payment_status,
+    } for bill in bills[:20]]
+    
+    return JsonResponse({'results': results})
+
+
+def live_search_customers(request):
+    """Live search for customers (AJAX)"""
+    query = request.GET.get('q', '').strip()
+    if not query:
+        return JsonResponse({'results': []})
+    
+    customers = Customer.objects.filter(
+        db_models.Q(name__icontains=query)
+        | db_models.Q(phone_number__icontains=query)
+    )
+    
+    results = [{
+        'id': customer.id,
+        'name': customer.name,
+        'phone': customer.phone_number,
+        'city': customer.city,
+    } for customer in customers[:20]]
+    
+    return JsonResponse({'results': results})

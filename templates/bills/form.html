@@ -92,10 +92,11 @@
                         <table class="table mb-0 items-table" id="items-table">
                             <thead>
                                 <tr>
-                                    <th style="width:35%">Description</th>
-                                    <th style="width:25%">Size <span class="text-danger">*</span></th>
+                                    <th style="width:30%">Description</th>
+                                    <th style="width:20%">Size <span class="text-danger">*</span></th>
+                                    <th style="width:15%">Qty <span class="text-danger">*</span></th>
                                     <th style="width:20%">Amount (₹) <span class="text-danger">*</span></th>
-                                    <th style="width:10%" class="text-center">Remove</th>
+                                    <th style="width:15%" class="text-center">Remove</th>
                                 </tr>
                             </thead>
                             <tbody id="formset-body">
@@ -115,6 +116,12 @@
                                         {{ item_form.size }}
                                         {% if item_form.size.errors %}
                                         <div class="text-danger small">{{ item_form.size.errors.as_text }}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ item_form.quantity }}
+                                        {% if item_form.quantity.errors %}
+                                        <div class="text-danger small">{{ item_form.quantity.errors.as_text }}</div>
                                         {% endif %}
                                     </td>
                                     <td>
@@ -152,16 +159,51 @@
                 </div>
                 <div class="card-body">
 
-                    <!-- Tax Rate -->
-                    <div class="mb-4">
-                        <label class="form-label fw-500">{{ form.tax_rate.label }}</label>
+                    <!-- Discount -->
+                    <div class="mb-3">
+                        <label class="form-label fw-500">{{ form.discount.label }}</label>
                         <div class="input-group">
-                            {{ form.tax_rate }}
-                            <span class="input-group-text">%</span>
+                            <span class="input-group-text">₹</span>
+                            {{ form.discount }}
                         </div>
-                        {% if form.tax_rate.errors %}
-                        <div class="invalid-feedback d-block">{{ form.tax_rate.errors.as_text }}</div>
+                        {% if form.discount.errors %}
+                        <div class="invalid-feedback d-block">{{ form.discount.errors.as_text }}</div>
                         {% endif %}
+                    </div>
+
+                    <!-- Extra Charges -->
+                    <div class="mb-3">
+                        <label class="form-label fw-500">{{ form.extra_charges.label }}</label>
+                        <div class="input-group">
+                            <span class="input-group-text">₹</span>
+                            {{ form.extra_charges }}
+                        </div>
+                        {% if form.extra_charges.errors %}
+                        <div class="invalid-feedback d-block">{{ form.extra_charges.errors.as_text }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Paid Amount -->
+                    <div class="mb-2">
+                        <label class="form-label fw-500">{{ form.paid_amount.label }}</label>
+                        <div class="input-group">
+                            <span class="input-group-text">₹</span>
+                            {{ form.paid_amount }}
+                        </div>
+                        {% if form.paid_amount.errors %}
+                        <div class="invalid-feedback d-block">{{ form.paid_amount.errors.as_text }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Paid in Full toggle -->
+                    <div class="mb-3 p-2 rounded" id="paid-full-wrap" style="background:#f0fdf4;border:1px solid #bbf7d0;">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" id="paid-full-check" role="switch">
+                            <label class="form-check-label" for="paid-full-check">
+                                <strong style="color:#15803d;">&#10003; Paid in Full</strong>
+                                <small class="text-muted d-block">Auto-sets paid amount equal to total</small>
+                            </label>
+                        </div>
                     </div>
 
                     <!-- Totals display -->
@@ -171,12 +213,24 @@
                             <span id="summary-subtotal" class="fw-500">₹0.00</span>
                         </div>
                         <div class="summary-row">
-                            <span>Tax (<span id="tax-rate-label">0.00</span>%)</span>
-                            <span id="summary-tax" class="text-muted">₹0.00</span>
+                            <span>Discount</span>
+                            <span id="summary-discount" class="text-success">-₹0.00</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Extra Charges</span>
+                            <span id="summary-extra" class="text-danger">+₹0.00</span>
                         </div>
                         <div class="summary-row total-row">
-                            <span class="fw-600">Total Payable</span>
+                            <span class="fw-600">Total Amount</span>
                             <span id="summary-total" class="fw-700 text-success fs-5">₹0.00</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Advance Paid</span>
+                            <span id="summary-paid" class="fw-500 text-info">₹0.00</span>
+                        </div>
+                        <div class="summary-row">
+                            <span><strong>Due Payment</strong></span>
+                            <span id="summary-due" class="fw-700 text-danger">₹0.00</span>
                         </div>
                     </div>
 
@@ -314,6 +368,11 @@
                        placeholder="e.g. 12\u00d718 inch">
             </td>
             <td>
+                <input type="number" name="items-${index}-quantity"
+                       class="form-control form-control-sm item-quantity"
+                       min="1" step="1" placeholder="1" value="1">
+            </td>
+            <td>
                 <input type="number" name="items-${index}-amount"
                        class="form-control form-control-sm item-amount"
                        step="0.01" min="0" placeholder="0.00">
@@ -344,26 +403,70 @@
 
     // ── Live bill summary ──────────────────────────────────────────
     function fmt(n) {
-        return '\u20b9' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return '\u20b9' + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     }
 
     function updateSummary() {
         let subtotal = 0;
         document.querySelectorAll('#formset-body .item-row').forEach(row => {
-            if (row.style.display === 'none') return;
+            if (row.style.display === 'none' || row.classList.contains('d-none')) return;
             const amt = row.querySelector('.item-amount');
             if (amt) subtotal += parseFloat(amt.value) || 0;
         });
-        const taxRate = parseFloat($id('id_tax_rate').value) || 0;
-        const taxAmt  = subtotal * taxRate / 100;
-        const total   = subtotal + taxAmt;
+        const discount     = parseFloat(($id('id_discount')     || {}).value) || 0;
+        const extraCharges = parseFloat(($id('id_extra_charges') || {}).value) || 0;
+        const total = Math.max(0, subtotal - discount + extraCharges);
+
+        // Keep paid amount synced when Paid in Full is checked
+        const paidCheck = document.getElementById('paid-full-check');
+        const paidEl = $id('id_paid_amount');
+        if (paidCheck && paidCheck.checked && paidEl) {
+            paidEl.value = total.toFixed(2);
+        }
+
+        const paidAmount = parseFloat(($id('id_paid_amount') || {}).value) || 0;
+        const due   = Math.max(0, total - paidAmount);
         $id('summary-subtotal').textContent = fmt(subtotal);
-        $id('summary-tax').textContent      = fmt(taxAmt);
+        $id('summary-discount').textContent = '-' + fmt(discount);
+        $id('summary-extra').textContent    = '+' + fmt(extraCharges);
         $id('summary-total').textContent    = fmt(total);
-        $id('tax-rate-label').textContent   = taxRate.toFixed(2);
+        $id('summary-paid').textContent     = fmt(paidAmount);
+        $id('summary-due').textContent      = fmt(due);
     }
 
-    $id('id_tax_rate').addEventListener('input', updateSummary);
+    // Paid in Full toggle
+    const paidFullCheck = document.getElementById('paid-full-check');
+    if (paidFullCheck) {
+        paidFullCheck.addEventListener('change', function() {
+            const paidEl = $id('id_paid_amount');
+            if (this.checked) {
+                paidEl.setAttribute('readonly', true);
+                paidEl.classList.add('bg-light');
+            } else {
+                paidEl.removeAttribute('readonly');
+                paidEl.classList.remove('bg-light');
+                paidEl.value = '0.00';
+            }
+            updateSummary();
+        });
+        // Pre-check on load if editing and fully paid
+        const paidEl = $id('id_paid_amount');
+        if (paidEl && parseFloat(paidEl.value) > 0) {
+            // Check after summary runs so total is known
+            setTimeout(() => {
+                const totalText = $id('summary-total').textContent.replace(/[₹,]/g, '');
+                if (parseFloat(paidEl.value) >= parseFloat(totalText)) {
+                    paidFullCheck.checked = true;
+                    paidEl.setAttribute('readonly', true);
+                    paidEl.classList.add('bg-light');
+                }
+            }, 50);
+        }
+    }
+
+    $id('id_discount')?.addEventListener('input', updateSummary);
+    $id('id_extra_charges')?.addEventListener('input', updateSummary);
+    $id('id_paid_amount')?.addEventListener('input', updateSummary);
     updateSummary();
 })();
 </script>

@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Dashboard — Jalaram CNC{% endblock %}
+{% block title %}Dashboard â€” Jalaram CNC{% endblock %}
 {% block page_heading %}Dashboard{% endblock %}
 
 {% block content %}
@@ -32,22 +32,56 @@
         <div class="stat-card stat-green">
             <div class="stat-icon"><i class="bi bi-calendar-month"></i></div>
             <div class="stat-body">
-                <div class="stat-value">{{ bills_this_month }}</div>
-                <div class="stat-label">Bills This Month</div>
+                <div class="stat-value">â‚¹{{ monthly_revenue|floatformat:0 }}</div>
+                <div class="stat-label">This Month Revenue</div>
             </div>
         </div>
     </div>
 
     <div class="col-6 col-xl-3">
-        <div class="stat-card stat-purple">
-            <div class="stat-icon"><i class="bi bi-currency-rupee"></i></div>
+        <div class="stat-card stat-red">
+            <div class="stat-icon"><i class="bi bi-exclamation-circle"></i></div>
             <div class="stat-body">
-                <div class="stat-value">₹{{ total_revenue|floatformat:0 }}</div>
-                <div class="stat-label">Total Revenue</div>
+                <div class="stat-value">â‚¹{{ total_due|floatformat:0 }}</div>
+                <div class="stat-label">Pending Due</div>
             </div>
         </div>
     </div>
 
+</div>
+
+<!-- Quick Actions -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <a href="{% url 'unpaid_bills' %}" class="card card-custom text-decoration-none" style="cursor: pointer;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">
+                            <i class="bi bi-exclamation-circle text-danger"></i> Unpaid Bills
+                        </h6>
+                        <p class="text-muted mb-0">{{ unpaid_bills_count }} bill(s) pending</p>
+                    </div>
+                    <span class="badge bg-danger">{{ unpaid_bills_count }}</span>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6">
+        <a href="{% url 'monthly_revenue' %}" class="card card-custom text-decoration-none" style="cursor: pointer;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">
+                            <i class="bi bi-graph-up text-success"></i> Monthly Revenue
+                        </h6>
+                        <p class="text-muted mb-0">View revenue breakdown</p>
+                    </div>
+                    <span class="badge bg-success">View â†’</span>
+                </div>
+            </div>
+        </a>
+    </div>
 </div>
 
 <!-- Recent Bills + Recent Customers -->
@@ -86,7 +120,7 @@
                                     <small class="text-muted">{{ bill.customer_city }}</small>
                                 </td>
                                 <td class="text-muted small">{{ bill.created_at|date:"d M Y" }}</td>
-                                <td class="text-end fw-600 text-success">₹{{ bill.total|floatformat:2 }}</td>
+                                <td class="text-end fw-600 text-success">â‚¹{{ bill.total }}</td>
                                 <td class="text-end">
                                     <a href="{% url 'bill_detail' bill.pk %}" class="btn btn-xs btn-outline-secondary">
                                         <i class="bi bi-eye"></i>

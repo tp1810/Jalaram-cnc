@@ -32,7 +32,8 @@ class BillForm(forms.ModelForm):
         model = Bill
         fields = [
             'customer', 'customer_name', 'customer_phone',
-            'customer_city', 'tax_rate', 'notes',
+            'customer_city', 'discount', 'extra_charges',
+            'paid_amount', 'notes',
         ]
         widgets = {
             'customer': forms.Select(attrs={
@@ -54,12 +55,26 @@ class BillForm(forms.ModelForm):
                 'placeholder': 'City',
                 'id': 'id_customer_city',
             }),
-            'tax_rate': forms.NumberInput(attrs={
+            'discount': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'step': '0.01',
+                'step': '1',
                 'min': '0',
-                'max': '100',
-                'id': 'id_tax_rate',
+                'id': 'id_discount',
+                'placeholder': '0',
+            }),
+            'extra_charges': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '1',
+                'min': '0',
+                'id': 'id_extra_charges',
+                'placeholder': '0',
+            }),
+            'paid_amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '1',
+                'min': '0',
+                'id': 'id_paid_amount',
+                'placeholder': '0',
             }),
             'notes': forms.Textarea(attrs={
                 'class': 'form-control',
@@ -72,15 +87,19 @@ class BillForm(forms.ModelForm):
             'customer_name': 'Customer Name',
             'customer_phone': 'Phone Number',
             'customer_city': 'City',
-            'tax_rate': 'Tax / GST Rate (%)',
+            'discount': 'Discount (₹)',
+            'extra_charges': 'Extra Charges (₹)',
+            'paid_amount': 'Amount Paid (₹)',
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['customer'].required = False
         self.fields['customer'].empty_label = '— Select existing customer (optional) —'
-        # City is optional (name + phone are always required)
         self.fields['customer_city'].required = False
+        # Show empty placeholder instead of 0 for new bills
+        if not (kwargs.get('instance') and kwargs['instance'].pk):
+            self.initial.update({'discount': '', 'extra_charges': '', 'paid_amount': ''})
 
     def clean(self):
         cleaned = super().clean()
@@ -103,7 +122,7 @@ class BillForm(forms.ModelForm):
 class BillItemForm(forms.ModelForm):
     class Meta:
         model = BillItem
-        fields = ['description', 'size', 'amount']
+        fields = ['description', 'size', 'quantity', 'amount']
         widgets = {
             'description': forms.TextInput(attrs={
                 'class': 'form-control form-control-sm',
@@ -112,6 +131,12 @@ class BillItemForm(forms.ModelForm):
             'size': forms.TextInput(attrs={
                 'class': 'form-control form-control-sm item-size',
                 'placeholder': 'e.g. 12×18 inch',
+            }),
+            'quantity': forms.NumberInput(attrs={
+                'class': 'form-control form-control-sm item-quantity',
+                'min': '1',
+                'step': '1',
+                'placeholder': 'Qty',
             }),
             'amount': forms.NumberInput(attrs={
                 'class': 'form-control form-control-sm item-amount',

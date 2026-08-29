@@ -3,5 +3,21 @@ name = "jalaram-cnc"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.11"
-dependencies = []
+authors = [
+    { name = "Tarang Patel", email = "tarangp1810@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "django==6.0.5",
+    "pillow>=12.3.0",
+    "playwright>=1.62.0",
+    "reportlab>=3.6.13",
+    "weasyprint>=69.0",
+]
+
+[project.scripts]
+jalaram-cnc = "jalaram_cnc:main"
+
+[build-system]
+requires = ["uv_build>=0.12.4,<0.13.0"]
+build-backend = "uv_build"

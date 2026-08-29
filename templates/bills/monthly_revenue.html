@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>Monthly Revenue</h2>
+            <small class="text-muted">Revenue breakdown by month</small>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Total Revenue</h6>
+                    <h2>â‚¹ {{ total_revenue }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if monthly_data %}
+    <div class="accordion" id="monthlyAccordion">
+        {% for month_key, month_info in monthly_data %}
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ forloop.counter }}">
+                    <strong>{{ month_info.display }}</strong>
+                    <span class="badge bg-primary ms-auto">â‚¹ {{ month_info.total }}</span>
+                </button>
+            </h2>
+            <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}" data-bs-parent="#monthlyAccordion">
+                <div class="accordion-body">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Bill #</th>
+                                <th>Customer</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for bill in month_info.bills %}
+                            <tr>
+                                <td><strong>#{{ bill.bill_number }}</strong></td>
+                                <td>{{ bill.customer_name }}</td>
+                                <td>â‚¹ {{ bill.total }}</td>
+                                <td>
+                                    {% if bill.is_paid %}
+                                        <span class="badge bg-success">Paid</span>
+                                    {% elif bill.paid_amount > 0 %}
+                                        <span class="badge bg-warning">Partial</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Unpaid</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ bill.created_at|date:"d M, Y" }}</td>
+                                <td>
+                                    <a href="{% url 'bill_detail' bill.pk %}" class="btn btn-sm btn-primary">View</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <h5>No bills found.</h5>
+        <p>Start creating bills to see revenue breakdown.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

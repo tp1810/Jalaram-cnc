@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ customer.name }} — Jalaram CNC{% endblock %}
+{% block title %}{{ customer.name }} â€” Jalaram CNC{% endblock %}
 {% block page_heading %}Customer Detail{% endblock %}
 
 {% block content %}
@@ -98,11 +98,11 @@
                                         {{ bill.items.count }} item{{ bill.items.count|pluralize }}
                                     </span>
                                 </td>
-                                <td class="text-end">₹{{ bill.subtotal|floatformat:2 }}</td>
+                                <td class="text-end">â‚¹{{ bill.subtotal }}</td>
                                 <td class="text-end text-muted small">
                                     {{ bill.tax_rate }}%
                                 </td>
-                                <td class="text-end fw-600 text-success">₹{{ bill.total|floatformat:2 }}</td>
+                                <td class="text-end fw-600 text-success">â‚¹{{ bill.total }}</td>
                                 <td class="text-center">
                                     <div class="btn-group btn-group-sm">
                                         <a href="{% url 'bill_detail' bill.pk %}"

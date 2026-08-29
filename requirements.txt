@@ -1,2 +1,4 @@
 Django==6.0.5
 reportlab>=3.6.13
+pillow
+weasyprint>=60.0

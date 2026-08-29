@@ -7,22 +7,19 @@
 
 <div class="page-toolbar mb-4">
     <div class="d-flex align-items-center gap-3 flex-wrap">
-        <!-- Search -->
-        <form method="get" class="search-form">
-            <div class="input-group">
+        <!-- Live Search -->
+        <div class="flex-grow-1" style="max-width: 400px;">
+            <div class="input-group position-relative">
                 <span class="input-group-text bg-white border-end-0">
                     <i class="bi bi-search text-muted"></i>
                 </span>
-                <input type="text" name="q" value="{{ query }}"
-                       class="form-control border-start-0 ps-0"
-                       placeholder="Search by name, phone or city…">
-                {% if query %}
-                <a href="{% url 'customer_list' %}" class="btn btn-outline-secondary">
-                    <i class="bi bi-x-lg"></i>
-                </a>
-                {% endif %}
+                <input type="text" id="liveSearch" class="form-control border-start-0 ps-0"
+                       placeholder="Search by name or phone..." autocomplete="off">
+                <div id="searchResults" class="position-absolute top-100 start-0 w-100 bg-white border border-top-0 rounded-bottom" 
+                     style="display: none; max-height: 300px; overflow-y: auto; z-index: 1000;">
+                </div>
             </div>
-        </form>
+        </div>
 
         <a href="{% url 'customer_create' %}" class="btn btn-primary ms-auto">
             <i class="bi bi-person-plus-fill me-1"></i> Add Customer
@@ -114,5 +111,58 @@
         {% endif %}
     </div>
 </div>
+
+<script>
+// Live Search for Customers
+const liveSearch = document.getElementById('liveSearch');
+const searchResults = document.getElementById('searchResults');
+const customersTable = document.querySelector('.table tbody');
+
+if (liveSearch && customersTable) {
+    liveSearch.addEventListener('input', async function() {
+        const query = this.value.trim().toLowerCase();
+        
+        // If no query, show all rows
+        if (!query) {
+            document.querySelectorAll('.table tbody tr').forEach(row => {
+                row.style.display = '';
+            });
+            searchResults.style.display = 'none';
+            return;
+        }
+
+        // Filter table rows in real-time
+        let matches = 0;
+        document.querySelectorAll('.table tbody tr').forEach(row => {
+            const name = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+            const phone = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
+            const city = row.querySelector('td:nth-child(4)').textContent.toLowerCase();
+            
+            if (name.includes(query) || phone.includes(query) || city.includes(query)) {
+                row.style.display = '';
+                matches++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Show/hide search results dropdown
+        if (matches > 0) {
+            searchResults.innerHTML = `<div class="p-3 text-muted"><strong>${matches}</strong> customer(s) found</div>`;
+            searchResults.style.display = 'block';
+        } else {
+            searchResults.innerHTML = '<div class="p-3 text-muted">No customers found</div>';
+            searchResults.style.display = 'block';
+        }
+    });
+
+    // Hide search results when clicking outside
+    document.addEventListener('click', function(e) {
+        if (e.target !== liveSearch) {
+            searchResults.style.display = 'none';
+        }
+    });
+}
+</script>
 
 {% endblock %}

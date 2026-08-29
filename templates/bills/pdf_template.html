@@ -17,7 +17,7 @@
         line-height: 1.5;
     }
 
-    /* ── Header ── */
+    /* â”€â”€ Header â”€â”€ */
     .header {
         border-bottom: 3px solid #1a1a2e;
         padding-bottom: 12px;
@@ -61,7 +61,7 @@
         margin-top: 4px;
     }
 
-    /* ── Bill Meta (customer + date) ── */
+    /* â”€â”€ Bill Meta (customer + date) â”€â”€ */
     .meta-table {
         display: table;
         width: 100%;
@@ -111,7 +111,7 @@
         color: #555;
     }
 
-    /* ── Items Table ── */
+    /* â”€â”€ Items Table â”€â”€ */
     .items-table {
         width: 100%;
         border-collapse: collapse;
@@ -137,9 +137,10 @@
         background-color: #fafafa;
     }
     .items-table .col-num    { width: 6%; text-align: center; color: #888; }
-    .items-table .col-desc   { width: 40%; }
-    .items-table .col-size   { width: 26%; }
-    .items-table .col-amount { width: 28%; text-align: right; font-weight: bold; }
+    .items-table .col-desc   { width: 34%; }
+    .items-table .col-size   { width: 20%; }
+    .items-table .col-qty    { width: 10%; text-align: center; }
+    .items-table .col-amount { width: 30%; text-align: right; font-weight: bold; }
     .size-badge {
         background: #eef0f5;
         padding: 2px 8px;
@@ -148,7 +149,7 @@
         font-weight: bold;
     }
 
-    /* ── Totals ── */
+    /* â”€â”€ Totals â”€â”€ */
     .totals-wrapper {
         display: table;
         width: 100%;
@@ -177,7 +178,37 @@
     }
     .total-final .value-col { text-align: right; }
 
-    /* ── Notes ── */
+    /* â”€â”€ Payment Info Box â”€â”€ */
+    .payment-box {
+        margin-top: 12px;
+        padding: 10px;
+        border-radius: 2px;
+        font-size: 11px;
+    }
+    .payment-box.paid {
+        background: #e8f5e9;
+        border-left: 3px solid #4caf50;
+    }
+    .payment-box.partial {
+        background: #fff3cd;
+        border-left: 3px solid #f9a825;
+    }
+    .payment-box.unpaid {
+        background: #ffebee;
+        border-left: 3px solid #f44336;
+    }
+    .payment-box-label {
+        font-size: 10px;
+        color: #555;
+        text-transform: uppercase;
+        margin-bottom: 3px;
+    }
+    .payment-box-amount {
+        font-size: 13px;
+        font-weight: bold;
+    }
+
+    /* â”€â”€ Notes â”€â”€ */
     .notes-section {
         margin-top: 18px;
         padding: 8px 12px;
@@ -188,7 +219,7 @@
         color: #555;
     }
 
-    /* ── Footer ── */
+    /* â”€â”€ Footer â”€â”€ */
     .footer {
         margin-top: 28px;
         padding-top: 10px;
@@ -207,7 +238,7 @@
 </head>
 <body>
 
-<!-- ── HEADER ── -->
+<!-- â”€â”€ HEADER â”€â”€ -->
 <div class="header">
     <div class="header-inner">
         <div class="header-left">
@@ -224,7 +255,7 @@
     </div>
 </div>
 
-<!-- ── BILL TO + BILL INFO ── -->
+<!-- â”€â”€ BILL TO + BILL INFO â”€â”€ -->
 <div class="meta-table">
     <div class="meta-left" style="padding-right:12px;">
         <div class="meta-box">
@@ -247,13 +278,14 @@
     </div>
 </div>
 
-<!-- ── ITEMS TABLE ── -->
+<!-- â”€â”€ ITEMS TABLE â”€â”€ -->
 <table class="items-table">
     <thead>
         <tr>
             <th class="col-num">#</th>
             <th class="col-desc">Description</th>
             <th class="col-size">Size</th>
+            <th class="col-qty">Qty</th>
             <th class="col-amount">Amount (&#8377;)</th>
         </tr>
     </thead>
@@ -265,13 +297,14 @@
             <td class="col-size">
                 <span class="size-badge">{{ item.size }}</span>
             </td>
+            <td class="col-qty">{{ item.quantity|default:1 }}</td>
             <td class="col-amount">&#8377;{{ item.amount }}</td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
 
-<!-- ── TOTALS ── -->
+<!-- â”€â”€ TOTALS â”€â”€ -->
 <div class="totals-wrapper">
     <div class="totals-spacer"></div>
     <div class="totals-box">
@@ -280,27 +313,56 @@
                 <td class="label-col">Subtotal</td>
                 <td class="value-col">&#8377;{{ bill.subtotal }}</td>
             </tr>
+            {% if bill.tax_amount > 0 %}
             <tr>
                 <td class="label-col">Tax @ {{ bill.tax_rate }}%</td>
                 <td class="value-col">&#8377;{{ bill.tax_amount }}</td>
             </tr>
+            {% endif %}
+            {% if bill.discount > 0 %}
+            <tr>
+                <td class="label-col">Discount</td>
+                <td class="value-col">-&#8377;{{ bill.discount }}</td>
+            </tr>
+            {% endif %}
+            {% if bill.extra_charges > 0 %}
+            <tr>
+                <td class="label-col">Extra Charges</td>
+                <td class="value-col">+&#8377;{{ bill.extra_charges }}</td>
+            </tr>
+            {% endif %}
             <tr class="totals-divider"><td colspan="2"></td></tr>
             <tr class="total-final">
                 <td class="label-col">Total Payable</td>
                 <td class="value-col">&#8377;{{ bill.total }}</td>
             </tr>
         </table>
+
+        <!-- Payment Information -->
+        {% if bill.paid_amount > 0 %}
+        <div class="payment-box {% if bill.is_paid %}paid{% elif bill.payment_status == 'Partial' %}partial{% else %}unpaid{% endif %}">
+            <div class="payment-box-label">Advance Paid</div>
+            <div class="payment-box-amount">&#8377;{{ bill.paid_amount }}</div>
+        </div>
+        {% endif %}
+
+        {% if bill.due_amount > 0 %}
+        <div class="payment-box unpaid">
+            <div class="payment-box-label">Due Payment</div>
+            <div class="payment-box-amount">&#8377;{{ bill.due_amount }}</div>
+        </div>
+        {% endif %}
     </div>
 </div>
 
-<!-- ── NOTES ── -->
+<!-- â”€â”€ NOTES â”€â”€ -->
 {% if bill.notes %}
 <div class="notes-section">
     <strong>Notes:</strong> {{ bill.notes }}
 </div>
 {% endif %}
 
-<!-- ── FOOTER ── -->
+<!-- â”€â”€ FOOTER â”€â”€ -->
 <div class="footer">
     <div class="footer-thanks">Thank you for your business!</div>
     Jalaram CNC Art &amp; Craft &mdash; This is a computer-generated invoice.

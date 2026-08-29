@@ -18,7 +18,7 @@ class CustomerAdmin(admin.ModelAdmin):
 
 @admin.register(Bill)
 class BillAdmin(admin.ModelAdmin):
-    list_display = ['bill_number', 'customer_name', 'customer_phone', 'customer_city', 'tax_rate', 'created_at']
+    list_display = ['bill_number', 'customer_name', 'customer_phone', 'customer_city', 'created_at']
     search_fields = ['bill_number', 'customer_name', 'customer_phone']
     list_filter = ['created_at']
     readonly_fields = ['bill_number']
