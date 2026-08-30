@@ -1,6 +1,6 @@
 ﻿# JALARAM CNC — PROJECT MEMORY & DOCUMENTATION
 
-**Last Updated**: August 30, 2026  
+**Last Updated**: August 30, 2026 (evening)  
 **Project**: Jalaram CNC Bill Management System  
 **Framework**: Django 6.0.5, Python 3.x  
 **Database**: SQLite (`db.sqlite3`)  
@@ -276,18 +276,21 @@ All routes are in `core/urls.py`, mounted at `/` via `jalaram_cnc/urls.py`.
 - Sidebar (`<aside class="sidebar">`) + topbar (`<header class="topbar">`) + `<main class="page-content">`
 - Blocks: `title`, `page_heading`, `content`, `extra_css`, `extra_js`
 - Context processor provides `today` (date) and `business_name` to every template
+- **Sidebar brand**: `.brand-icon` renders `<img src="{% static 'images/logo.jpeg' %}">` with `.brand-logo-img` class (white background, `object-fit: contain`). No longer uses the Bootstrap `bi-tools` icon.
 
 ### `bills/detail.html`
 - Renders the full invoice inline (no iframe) using CSS matching `print.html` design
 - Invoice element: `id="inv-page-content"` on `.inv-page` div
 - Action buttons: Back, Edit, Download PDF, Print, Share, Delete
 - **Print button**: `onclick="window.print()"` — prints the current page directly
-- **@media print CSS**: hides sidebar, topbar, action bar; renders only the invoice
+- **Print CSS**: `@page { size: A4; margin: 0; }` suppresses browser date/URL/page-number headers. `* { print-color-adjust: exact }` forces background colors (black table header, TOTAL row, badges). Action bar hidden via `.d-flex.align-items-center.gap-2.mb-3 { display: none }`.
 - **`downloadInvoicePDF()`**: uses html2pdf.js with `onclone` callback to hide sidebar/topbar in the render context, then captures `#inv-page-content` directly (no manual cloning needed)
 - **`shareBill()`**: same approach, generates PDF blob, uses Web Share API; falls back to download
 - `pdfOpts()`: `margin:0, scale:2, useCORS:true, onclone:hides sidebar/topbar, pagebreak:{mode:'avoid-all'}, jsPDF:{format:'a4'}`
 - `BILL_NUM` JS variable set from `{{ bill.bill_number }}`
 - Amount in words displayed via `{{ amount_words }}` context variable
+- **Disclaimer** shown after amount-in-words: *"We will not be responsible for any material after leaving the office."* — bold, dark, left-border accent (`.inv-disclaimer`)
+- **No duplicate Bill#/Date** — the right-hand `inv-info-box` beside "Bill To" was removed; Invoice# and Date appear only in the header top-right
 
 ### `bills/list.html`
 - PDF download button uses `quickPDF()`: fetches detail page HTML, extracts `#inv-page-content` + styles via DOMParser, renders in hidden container with html2pdf.js (fast, no Playwright)
@@ -298,9 +301,14 @@ All routes are in `core/urls.py`, mounted at `/` via `jalaram_cnc/urls.py`.
 ### `bills/print.html`
 - Standalone page with full invoice (no base.html extends)
 - Used exclusively by `bill_pdf` view (Playwright renders it server-side)
+- Also used directly via browser when opening `/bills/<pk>/pdf/` and the toolbar Print button
 - Has a toolbar (`.no-print`) hidden when `is_preview=True`
 - Uses base64 images from `logo_b64` / `qr_b64` context vars (needed because Playwright can't load static files via relative URL)
 - Shows Advance Paid only if `paid_amount > 0`; shows Due Payment only if `paid_amount > 0 AND due_amount > 0`
+- **`@page { size: A4; margin: 0; }`** suppresses browser print headers/footers (date, title, URL, page numbers)
+- **`* { print-color-adjust: exact }`** forces background colors when printing
+- **Disclaimer** shown after amount-in-words: bold, dark, left-border accent (`.disclaimer`)
+- **No duplicate Bill#/Date** — `invoice-info-box` beside "Bill To" removed; Invoice# and Date in header only
 
 ### `bills/form.html`
 - Extends `base.html`, uses `{% block extra_css %}` for Tom Select CSS
@@ -318,7 +326,13 @@ All routes are in `core/urls.py`, mounted at `/` via `jalaram_cnc/urls.py`.
 
 ### `bills/unpaid.html`
 - Table: Bill#, Customer, Phone, Total, Paid Amount (badge: ₹X if paid, "Not Paid" if 0), Due Amount, Date, Actions
-- Summary card showing total due
+- Summary card (red) showing total due
+
+### `bills/monthly_revenue.html`
+- Accordion layout — one item per month, expanded by default for the first month
+- Each accordion shows a table of bills for that month: Bill#, Customer, Total, Status badge, Date, View link
+- Summary card (green) showing total revenue across all months
+- Context: `monthly_data` (list of `(month_key, {display, total, bills})`), `total_revenue`
 
 ---
 
@@ -378,6 +392,12 @@ Available in every template as `{{ today }}` and `{{ business_name }}`.
 
 11. **PDF from list/customer pages uses fetch+parse** — `quickPDF()` fetches the detail page HTML, extracts `#inv-page-content` + `<style>` blocks via DOMParser, renders in an isolated hidden container. Fast (~0.5s) because no Playwright/server-side rendering.
 
+12. **Print background colors** — browsers strip background colors/images by default. Both invoice templates use `* { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }` in `@media print` to force them. Without this, the dark table header, TOTAL row, "Bill To" badge, and payment badges all go white.
+
+13. **Browser print headers/footers** — suppressed via `@page { size: A4; margin: 0; }`. This removes the margin area where Chrome/Edge/Firefox inject the page title, date, URL, and page number. Both `detail.html` and `print.html` include this rule.
+
+14. **`bill_edit` does NOT have upsert logic** — only `bill_create` has the full customer find-or-create logic. `bill_edit` calls `form.save()` / `formset.save()` directly and updates only bill fields, not the linked customer record.
+
 ---
 
 ## INVOICE LAYOUT (print.html / detail.html)
@@ -385,26 +405,28 @@ Available in every template as `{{ today }}` and `{{ business_name }}`.
 ```
 +-------------------------------------------------------------+
 | [LOGO 90px]  Jalaram CNC Art & Craft              INVOICE   |
-|              Address, Phone                  Bill #: [auto] |
-|                                              Date:  [auto]  |
-+-------------------------+-----------------------------------+
-| BILL TO                 |  Bill Number  :  #NNN             |
-| Customer Name           |  Date         :  DD Mon YYYY      |
-| Phone: XXXXXXXXXX       |  Payment      :  Paid/Partial/..  |
-| City                    |                                    |
-+-------------------------+-----------------------------------+
+|              Address, Phone                Invoice No: NNN  |
+|                                            Date: DD/MM/YYYY |
++-------------------------------------------------------------+
+| BILL TO                                                     |
+| Customer Name                                               |
+| Phone: XXXXXXXXXX                                           |
+| City                                                        |
++-------------------------------------------------------------+
 | #  | Description |    Size       |  Qty  |  Amount (Rs)     |
 | 1  | [text]      | [12x18 inch]  |   2   |       500        |
 +-------------------------------------------------------------+
 |                         Sub Total    :          Rs NNN      |
 |                         Discount     :         -Rs NNN      |
 |                         Extra Charges:         +Rs NNN      |
+|  (if paid_amount > 0)  Advance Paid  :          Rs NNN      |
+|  (if due > 0)          Due Payment   :          Rs NNN      |
 |                         TOTAL AMOUNT :          Rs NNN      |
 +-------------------------------------------------------------+
 |  Amount in Words: Five Hundred Rupees Only                  |
 +-------------------------------------------------------------+
-|  (if paid_amount > 0)  Advance Paid  :  Rs NNN              |
-|  (if due > 0)          Due Payment   :  Rs NNN              |
+|  ⚠ We will not be responsible for any material after        |
+|    leaving the office.  (bold italic)                       |
 +-------------------------+-----------------------------------+
 | BANK DETAILS            |      [QR CODE 120px]              |
 | Bank : SBI, Kapadwanj   |  Scan to Pay                      |
@@ -445,6 +467,7 @@ Create superuser first: `.venv\Scripts\python.exe manage.py createsuperuser`
 
 | Date | Change |
 |---|---|
+| 2026-08-30 | Sidebar brand icon replaced with actual logo image (logo.jpeg). Invoice duplicate Bill#/Date removed (kept only in header). Disclaimer line added to invoice. Print fixed: @page margin:0 suppresses browser headers/footers; print-color-adjust:exact restores background colors. PROJECT_MEMORY updated. |
 | 2026-08-30 | PDF download switched to client-side html2pdf.js everywhere (detail, list, customer detail). Playwright endpoint kept as fallback but no UI uses it. Fixed left-cropping via onclone (detail) and fetch+parse (list/customer). |
 | 2026-08-30 | Full PROJECT_MEMORY rewrite — accurate to actual codebase |
 | 2026-08-30 | Fixed: bill_print removal, extra_charges required error, encoding corruption (₹/—/→), Tom Select searchable dropdown, clone-based PDF, @media print CSS |
