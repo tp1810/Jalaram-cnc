@@ -1,507 +1,442 @@
-# JALARAM CNC - PROJECT MEMORY & DOCUMENTATION
+﻿# JALARAM CNC — PROJECT MEMORY & DOCUMENTATION
 
-**Last Updated**: August 29, 2026 (Session 2 fixes)  
+**Last Updated**: August 30, 2026  
 **Project**: Jalaram CNC Bill Management System  
-**Framework**: Django 6.0.5 with Bootstrap 5  
-**Status**: ✅ COMPLETE & PRODUCTION READY
+**Framework**: Django 6.0.5, Python 3.x  
+**Database**: SQLite (`db.sqlite3`)  
+**Package Manager**: `uv` (venv at `.venv/`)  
+**Status**: Active / Production-ready for local use
 
 ---
 
-## 📋 PROJECT OVERVIEW
+## BUSINESS DETAILS (hardcoded in templates)
 
-**Jalaram CNC Bill Management System** is a Django-based billing and invoice generation application designed for Jalaram CNC & Laser Cutting business.
+| Field | Value |
+|---|---|
+| Business Name | Jalaram CNC Art & Craft |
+| Address | 02, Samarth Square Complex, Modasa Road, Kapadwanj |
+| Phone | +91 7573855710 / +91 6351325475 |
+| Bank | State Bank of India, Kapadwanj |
+| Account No | 36474515254 |
+| IFSC | SBIN0000287 |
 
-### Core Features:
-- 📄 Professional invoice generation (PDF & Print)
-- 💰 Complete payment tracking (Advance, Due)
-- 👥 Customer management
-- 📊 Bill history and revenue tracking
-- 🔍 Live search functionality
-- 🎨 Professional invoice template based on Biomedix design
-
----
-
-## 🎯 WHAT WAS ACCOMPLISHED IN THIS SESSION
-
-### 1. ✅ Bug Fixes
-- **FieldError Fix**: Changed database queries from F('total') to Python filtering
-  - Issue: F() expressions don't work with @property fields
-  - Solution: Use prefetch_related() + list comprehension
-  - Applied to: dashboard(), unpaid_bills() views
-
-- **TemplateSyntaxError Fix**: Removed malformed duplicate template tags
-  - Issue: bills/list.html had extra {% endif %} at end
-  - Solution: Cleaned up template closing tags
-
-### 2. ✅ Form Simplification
-- **Removed Tax Rate Field Completely**
-  - Removed from BillForm.Meta.fields
-  - Removed widget configuration
-  - Removed label definitions
-  - Database field still exists (backward compatible) but unused
-  - No GST calculations anywhere in system
-
-- **Kept Essential Fields**:
-  - Customer Name, Phone, City
-  - Discount (₹) - right side
-  - Extra Charges (₹) - right side
-  - Amount Paid (Advance) - right side
-  - Notes
-
-### 3. ✅ Professional Invoice Template
-- **Created**: templates/bills/invoice.html (professional PDF template)
-- **Based On**: Biomedix invoice design pattern
-- **Contains**:
-  - Company branding (Logo, Name, Address, Phone)
-  - Invoice header (Bill #, Date)
-  - Bill To section (Customer name, mobile)
-  - Items table (4 columns: No., Description, Size, Amount)
-  - Calculation section (Subtotal, Discount, Extra Charges, Total)
-  - Color-coded payment boxes (Green/Yellow/Red)
-  - Bank details (SBI, KAPADWANJ)
-  - QR code placeholder
-  - Signature area
-  - Professional styling
-
-### 4. ✅ Live Search Implementation
-- **Customers Page**: Real-time table filtering (no page reload)
-  - Filters by name, phone, city
-  - Instant results as user types
-  - Vanilla JavaScript (no dependencies)
-
-- **Bills Page**: AJAX-based search
-  - Search dropdown with matching bills
-  - Shows bill number and customer name
-  - No page reload needed
-
-### 5. ✅ Payment Tracking System
-- **Color-Coded Display**:
-  - GREEN BOX: Full advance payment
-  - YELLOW BOX: Partial advance payment
-  - RED BOX: Due payment remaining
-
-- **Auto-Calculated Fields**:
-  - Subtotal = sum of item amounts
-  - Total = Subtotal + Extra Charges - Discount
-  - Due Amount = Total - Paid Amount
-  - Payment Status = "Paid" / "Partial" / "Unpaid"
+Logo: `static/images/logo.jpeg`  
+QR Code: `static/images/qr_code.jpeg`
 
 ---
 
-## 📁 PROJECT STRUCTURE
+## HOW TO RUN
+
+```bash
+# First time setup
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+playwright install chromium       # needed for /bills/<pk>/pdf/
+python manage.py migrate
+python manage.py runserver
+```
+
+Or with `uv`:
+```bash
+uv pip install -r requirements.txt
+```
+
+App runs at: `http://127.0.0.1:8000/`
+
+---
+
+## PROJECT STRUCTURE
 
 ```
 Jalaram CNC/
-├── db.sqlite3
-├── manage.py
-├── requirements.txt
-├── PROJECT_MEMORY.md (this file)
-├── README.md (original project readme)
-│
-├── core/ (main app)
-│   ├── models.py (Bill, BillItem, Customer models)
-│   ├── views.py (all business logic)
-│   ├── forms.py (BillForm, CustomerForm - tax field removed)
-│   ├── urls.py (routing)
-│   ├── admin.py
-│   ├── apps.py
-│   ├── context_processors.py
-│   └── migrations/
-│
-├── jalaram_cnc/ (project settings)
-│   ├── settings.py
-│   ├── urls.py
-│   ├── wsgi.py
-│   └── __init__.py
-│
-├── templates/
-│   ├── base.html
-│   ├── dashboard.html
-│   ├── bills/
-│   │   ├── list.html
-│   │   ├── detail.html
-│   │   ├── form.html (bill creation/edit)
-│   │   ├── invoice.html (✨ NEW - professional PDF template)
-│   │   └── pdf_template.html (old, kept for compatibility)
-│   └── customers/
-│       ├── list.html
-│       ├── detail.html
-│       └── form.html
-│
-├── static/
-│   └── css/
-│       └── style.css
-│
-└── src/
-    └── jalaram_cnc/
-        └── __init__.py
++-- db.sqlite3
++-- manage.py
++-- main.py
++-- requirements.txt
++-- setup.bat
++-- biomedix_invoice_template.html   # reference design only
++-- PROJECT_MEMORY.md
+|
++-- core/                            # main Django app
+|   +-- models.py
+|   +-- views.py
+|   +-- forms.py
+|   +-- urls.py
+|   +-- admin.py
+|   +-- apps.py
+|   +-- context_processors.py
+|   +-- bill_generator.py            # ReportLab helper (NOT used by any URL)
+|   +-- migrations/
+|       +-- 0001_initial.py
+|       +-- 0002_payment_fields.py
+|
++-- jalaram_cnc/                     # Django project settings
+|   +-- settings.py
+|   +-- urls.py
+|   +-- wsgi.py
+|
++-- templates/
+|   +-- base.html
+|   +-- dashboard.html
+|   +-- bills/
+|   |   +-- list.html
+|   |   +-- detail.html              # inline invoice + html2pdf.js
+|   |   +-- form.html                # create/edit with Tom Select
+|   |   +-- print.html               # used by bill_pdf (Playwright)
+|   |   +-- invoice.html             # older standalone template (kept)
+|   |   +-- pdf_template.html        # legacy (kept for compatibility)
+|   |   +-- unpaid.html
+|   |   +-- monthly_revenue.html
+|   +-- customers/
+|       +-- list.html
+|       +-- detail.html
+|       +-- form.html
+|
++-- static/
+    +-- css/style.css
+    +-- images/
+        +-- logo.jpeg
+        +-- qr_code.jpeg
 ```
 
 ---
 
-## 🔧 TECHNICAL CHANGES MADE
+## DEPENDENCIES
 
-### models.py
-**Status**: No changes needed
-- Bill model has all required fields
-- @property methods for calculations: subtotal, total, due_amount, is_paid, payment_status
-- BillItem model for line items
-- All fields present and working
+### Python (`requirements.txt`)
+```
+Django==6.0.5
+reportlab>=3.6.13     # used in bill_generator.py (NOT routed — legacy)
+pillow
+weasyprint>=60.0      # in requirements but NOT used (Playwright replaced it)
+```
+**Playwright** is used for server-side PDF but is installed separately:
+```bash
+playwright install chromium
+```
 
-### forms.py
-**Status**: ✅ UPDATED
+### Frontend CDNs (in templates)
+| Library | Version | Used In |
+|---|---|---|
+| Bootstrap 5 | 5.3.2 | base.html |
+| Bootstrap Icons | 1.11.3 | base.html |
+| Google Fonts (Inter) | — | base.html |
+| SweetAlert2 | 11 | base.html |
+| html2pdf.js | 0.10.1 | bills/detail.html |
+| Tom Select (Bootstrap 5 theme) | 2.3.1 | bills/form.html |
+
+---
+
+## DATABASE SCHEMA
+
+### Customer
+| Field | Type | Notes |
+|---|---|---|
+| id | AutoField | PK |
+| name | CharField(200) | |
+| phone_number | CharField(15) | **unique** |
+| city | CharField(100) | |
+| created_at | DateTimeField | auto |
+| updated_at | DateTimeField | auto |
+
+`__str__` → `"Name (phone_number)"`  
+Ordered by `-created_at`
+
+### Bill
+| Field | Type | Notes |
+|---|---|---|
+| id | AutoField | PK |
+| bill_number | PositiveIntegerField | unique, auto-set on create via Max()+1 |
+| customer | FK(Customer) | nullable, SET_NULL on delete |
+| customer_name | CharField(200) | denormalised copy |
+| customer_phone | CharField(15) | denormalised copy |
+| customer_city | CharField(100) | denormalised copy |
+| discount | IntegerField | default 0 |
+| extra_charges | IntegerField | default 0 |
+| paid_amount | IntegerField | default 0 |
+| notes | TextField | blank=True |
+| created_at | DateTimeField | auto |
+| updated_at | DateTimeField | auto |
+
+**Calculated properties** (Python only, not DB columns):
+
+| Property | Formula |
+|---|---|
+| `subtotal` | `sum(item.amount for item in items.all())` |
+| `total` | `subtotal - discount + extra_charges` |
+| `due_amount` | `max(0, total - paid_amount)` |
+| `is_paid` | `due_amount == 0` |
+| `payment_status` | `'Unpaid'` / `'Partial'` / `'Paid'` |
+
+`__str__` → `"Bill #N - Customer Name"`
+
+### BillItem
+| Field | Type | Notes |
+|---|---|---|
+| id | AutoField | PK |
+| bill | FK(Bill) | CASCADE, related_name='items' |
+| description | CharField(200) | blank=True (optional) |
+| size | CharField(100) | required |
+| quantity | PositiveIntegerField | default 1 |
+| amount | IntegerField | required, whole rupees |
+
+> **All money values are IntegerField** — whole rupees, no decimals.
+
+---
+
+## URL ROUTES
+
+All routes are in `core/urls.py`, mounted at `/` via `jalaram_cnc/urls.py`.
+
+### Dashboard
+| URL | Name | View |
+|---|---|---|
+| `/` | `dashboard` | Dashboard with stats, recent bills/customers |
+
+### Customers
+| URL | Name | View | Notes |
+|---|---|---|---|
+| `/customers/` | `customer_list` | List with search | |
+| `/customers/add/` | `customer_create` | Create form | |
+| `/customers/phone-lookup/` | `customer_phone_lookup` | AJAX JSON | Returns customer by phone |
+| `/customers/live-search/` | `live_search_customers` | AJAX JSON | Search by name/phone |
+| `/customers/<pk>/` | `customer_detail` | Detail + bill history | |
+| `/customers/<pk>/edit/` | `customer_update` | Edit form | |
+| `/customers/<pk>/delete/` | `customer_delete` | POST only | |
+| `/customers/<pk>/api/` | `customer_api` | AJAX JSON | Returns name/phone/city |
+
+### Bills
+| URL | Name | View | Notes |
+|---|---|---|---|
+| `/bills/` | `bill_list` | List with search | |
+| `/bills/create/` | `bill_create` | Create form | |
+| `/bills/unpaid/` | `unpaid_bills` | Unpaid list | Sorted by due amount desc |
+| `/bills/monthly-revenue/` | `monthly_revenue` | Revenue by month | |
+| `/bills/live-search/` | `live_search_bills` | AJAX JSON | Search by name/phone/number |
+| `/bills/<pk>/` | `bill_detail` | Inline invoice | PDF/Print/Share buttons |
+| `/bills/<pk>/edit/` | `bill_edit` | Edit form | |
+| `/bills/<pk>/delete/` | `bill_delete` | POST only | |
+| `/bills/<pk>/pdf/` | `bill_pdf` | Playwright PDF | Downloads PDF file |
+
+> `bill_print` URL **does not exist** — it was removed. Do not reference `{% url 'bill_print' %}` anywhere.
+
+---
+
+## VIEWS REFERENCE (`core/views.py`)
+
+### Helper functions
+- `_image_b64(rel_static_path)` — reads static file, returns `data:image/...;base64,...` URI (for Playwright rendering)
+- `_n2w(n)` / `_amount_words(amount)` — converts integer amount to words ("Five Hundred Rupees Only"), Indian number system
+- `_customers_dict()` — returns `{str(id): {name, phone, city}}` dict for the bill form JSON context
+
+### View logic highlights
+
+**`bill_create` / `bill_edit`** — Smart customer management:
+1. Phone number is the unique customer identifier
+2. If a customer is selected from dropdown + phone unchanged → update name/city if different
+3. If phone is changed → find/create customer with new phone
+4. If manual entry (no dropdown) → look up by phone, auto-create if new
+
+**`bill_pdf`** — Playwright server-side PDF:
+- Renders `bills/print.html` with `is_preview=True`, `logo_b64`, `qr_b64`
+- Opens Chromium headless, sets HTML content, exports PDF (A4, no margins)
+- Returns `application/pdf` inline response
+- If Playwright fails → returns HTTP 500 with error text
+
+**`dashboard`** — uses `prefetch_related('items')` + Python list comprehension (F() expressions can't be used on @property fields)
+
+**`unpaid_bills`** — sorted in Python: `(-due_amount, created_at)`
+
+---
+
+## FORMS REFERENCE (`core/forms.py`)
+
+### `CustomerForm`
+- Fields: `name`, `phone_number`, `city`
+
+### `BillForm`
+- Fields: `customer`, `customer_name`, `customer_phone`, `customer_city`, `discount`, `extra_charges`, `paid_amount`, `notes`
+- `customer`: required=False, Tom Select searchable dropdown (name + phone)
+- `customer_city`: required=False
+- `discount`, `extra_charges`, `paid_amount`: required=False, `clean_*` methods default to `0` if blank
+- New bill: initial values for discount/extra_charges/paid_amount are `''` (shows placeholder, not 0)
+- `clean()`: validates customer_name and customer_phone are non-empty; strips whitespace
+
+### `BillItemForm` + `BillItemFormSet`
+- Fields: `description` (optional), `size`, `quantity`, `amount`
+- FormSet: `min_num=1`, `extra=1`, `can_delete=True`
+
+---
+
+## TEMPLATES REFERENCE
+
+### `base.html`
+- Sidebar (`<aside class="sidebar">`) + topbar (`<header class="topbar">`) + `<main class="page-content">`
+- Blocks: `title`, `page_heading`, `content`, `extra_css`, `extra_js`
+- Context processor provides `today` (date) and `business_name` to every template
+
+### `bills/detail.html`
+- Renders the full invoice inline (no iframe) using CSS matching `print.html` design
+- Invoice element: `id="inv-page-content"` on `.inv-page` div
+- Action buttons: Back, Edit, Download PDF, Print, Share, Delete
+- **Print button**: `onclick="window.print()"` — prints the current page directly
+- **@media print CSS**: hides sidebar, topbar, action bar; renders only the invoice
+- **`downloadInvoicePDF()`**: clones `#inv-page-content` into off-screen `position:fixed; left:-9999px; width:794px` container to avoid Bootstrap column width constraints, then uses html2pdf.js
+- **`shareBill()`**: same clone approach, generates PDF blob, uses Web Share API; falls back to download
+- `pdfOpts()`: `margin:0, scale:2, useCORS:true, pagebreak:{mode:'avoid-all'}, jsPDF:{format:'a4'}`
+- `BILL_NUM` JS variable set from `{{ bill.bill_number }}`
+- Amount in words displayed via `{{ amount_words }}` context variable
+
+### `bills/print.html`
+- Standalone page with full invoice (no base.html extends)
+- Used exclusively by `bill_pdf` view (Playwright renders it server-side)
+- Has a toolbar (`.no-print`) hidden when `is_preview=True`
+- Uses base64 images from `logo_b64` / `qr_b64` context vars (needed because Playwright can't load static files via relative URL)
+- Shows Advance Paid only if `paid_amount > 0`; shows Due Payment only if `paid_amount > 0 AND due_amount > 0`
+
+### `bills/form.html`
+- Extends `base.html`, uses `{% block extra_css %}` for Tom Select CSS
+- **Tom Select**: initialised on `#id_customer`; dispatches native `change` event so existing autofill JS works
+- **Autofill**: selecting customer from dropdown fills name/phone/city; typing phone triggers `/customers/phone-lookup/` debounced AJAX
+- **"Paid in Full" toggle** (`#paid-full-check`): sets paid_amount = total, locks field; unchecking restores
+- `fmt(n)` JS function: `Math.round(n)` — integer display, no decimals
+- `updateSummary()`: live calculation of subtotal/total/due shown in right column
+- Customer data passed as `{{ customers_dict|json_script:"customer-data" }}` (XSS-safe)
+
+### `dashboard.html`
+- 4 stat cards: Total Customers, Total Bills, This Month Revenue (₹), Pending Due (₹)
+- Recent Bills table (last 6), Recent Customers list (last 5)
+- Quick action cards: Unpaid Bills, Monthly Revenue, View All Bills
+
+### `bills/unpaid.html`
+- Table: Bill#, Customer, Phone, Total, Paid Amount (badge: ₹X if paid, "Not Paid" if 0), Due Amount, Date, Actions
+- Summary card showing total due
+
+---
+
+## CONTEXT PROCESSOR (`core/context_processors.py`)
+
 ```python
-# BEFORE:
-BillForm.Meta.fields = [..., 'tax_rate', ...]
-
-# AFTER:
-BillForm.Meta.fields = ['customer', 'customer_name', 'customer_phone', 
-                         'customer_city', 'discount', 'extra_charges', 
-                         'paid_amount', 'notes']
+def site_info(request):
+    return {'today': timezone.now().date(), 'business_name': 'Jalaram CNC Art & Craft'}
 ```
-- Removed all tax_rate references
-- Form now simpler, focused on essential fields
-
-### views.py
-**Status**: ✅ UPDATED
-```python
-# BEFORE: bill_pdf() used complicated ReportLab generation
-# AFTER: Uses WeasyPrint with professional HTML template
-
-def bill_pdf(request, pk):
-    bill = Bill.objects.get(pk=pk)
-    html_string = render_to_string('bills/invoice.html', {'bill': bill})
-    html = HTML(string=html_string)
-    pdf = html.write_pdf()
-    return FileResponse(pdf, as_attachment=True, filename=f'Bill-{bill.bill_number}.pdf')
-```
-- dashboard(): Changed to Python filtering
-- unpaid_bills(): Changed to Python filtering
-- All views working with new template
-
-### templates/bills/invoice.html
-**Status**: ✅ CREATED (Professional PDF template)
-- Professional layout based on Biomedix template
-- All sections included
-- Responsive styling
-- Print-ready formatting
-- Color-coded payment boxes
-- Bank details section
-
-### templates/customers/list.html
-**Status**: ✅ UPDATED
-- Added live search functionality
-- Real-time table filtering
-- Removed form-based search
-
-### templates/bills/list.html
-**Status**: ✅ UPDATED
-- Fixed template syntax errors
-- Removed duplicate closing tags
-
-### requirements.txt
-**Status**: ✅ UPDATED
-- Added: weasyprint>=60.0
+Available in every template as `{{ today }}` and `{{ business_name }}`.
 
 ---
 
-## 💾 DATABASE SCHEMA (Bill Model)
+## ADMIN (`core/admin.py`)
 
-```python
-Bill:
-├── bill_number (auto-increment)
-├── customer (FK to Customer)
-├── customer_name (CharField)
-├── customer_phone (CharField)
-├── customer_city (CharField, optional)
-├── discount (DecimalField, ₹)
-├── extra_charges (DecimalField, ₹)
-├── paid_amount (DecimalField, ₹)
-├── tax_rate (DEPRECATED - kept for compatibility, not used)
-├── notes (TextField, optional)
-├── created_at (DateTime)
-├── updated_at (DateTime)
-│
-└── items (related BillItems)
-    ├── description (CharField)
-    ├── size (CharField)
-    ├── quantity (IntegerField)
-    └── amount (DecimalField, ₹)
-
-Auto-Calculated Properties:
-├── subtotal = sum(item.amount for each item)
-├── tax_amount = DEPRECATED (not calculated)
-├── total = subtotal + extra_charges - discount
-├── due_amount = total - paid_amount
-├── is_paid = (due_amount == 0)
-└── payment_status = "Paid" / "Partial" / "Unpaid"
-```
+- `CustomerAdmin`: list_display name/phone/city/created_at; search by name/phone/city
+- `BillAdmin`: list_display bill_number/customer_name/phone/city/created_at; readonly bill_number; inline BillItemInline
+- `BillItemInline`: TabularInline, fields description/size/amount
 
 ---
 
-## 🎨 INVOICE TEMPLATE SPECIFICATION
+## SETTINGS HIGHLIGHTS (`jalaram_cnc/settings.py`)
 
-### Invoice Sections (in order):
-
-1. **Header** (Logo + Company Info)
-   ```
-   [LOGO]  JALARAM CNC & LASER CUTTING        INVOICE
-           02, Samarth Square Complex         Bill #: [auto]
-           Modasa Road, Kapadwanj             Date: [auto]
-           +91 7573855710 / +91 6351325475
-   ```
-
-2. **Bill To**
-   ```
-   BILL TO
-   [Customer Name]
-   Mobile: [Customer Phone]
-   ```
-
-3. **Items Table**
-   ```
-   No. │ Product Description │ Size   │ Amount (₹)
-   ────┼────────────────────┼────────┼───────────
-    1  │ [description]      │ [size] │ ₹[amount]
-   ```
-
-4. **Totals**
-   ```
-   Sub Total              ₹ [subtotal]
-   Discount              -₹ [discount, if > 0]
-   Extra Charges         +₹ [extra, if > 0]
-   ──────────────────────────────────
-   TOTAL AMOUNT          ₹ [total]
-   ```
-
-5. **Payment Status (Color-Coded)**
-   - GREEN: Advance Paid ₹[paid_amount] (if fully paid)
-   - YELLOW: Advance Paid ₹[paid_amount] (if partial)
-   - RED: Due Payment ₹[due_amount] (if balance due)
-
-6. **Amount in Words**
-   ```
-   Amount in Words (Indian Rupees): ₹ [total in words]
-   ```
-
-7. **Bank Details**
-   ```
-   Bank Name: STATE BANK OF INDIA
-   Branch: KAPADWANJ
-   Account Number: 36474515254
-   IFSC Code: SBIN0000287
-   ```
-
-8. **Footer** (QR Code + Signature)
-   ```
-   [QR CODE]     For JALARAM CNC
-                 [STAMP]
-                 _______________
-                 Authorized Signature
-   ```
+| Setting | Value | Notes |
+|---|---|---|
+| `DEBUG` | `True` (env: `DEBUG`) | Set to False in production |
+| `SECRET_KEY` | placeholder | **Change before production** |
+| `ALLOWED_HOSTS` | `['*']` | **Restrict in production** |
+| `DATABASE` | SQLite `db.sqlite3` | |
+| `STATIC_URL` | `/static/` | |
+| `STATICFILES_DIRS` | `[BASE_DIR / 'static']` | |
+| Context processors | `core.context_processors.site_info` | adds today + business_name |
 
 ---
 
-## 🚀 HOW TO USE THE SYSTEM
+## KNOWN GOTCHAS / IMPORTANT NOTES
 
-### Create a New Bill:
-```
-1. Go to: http://localhost:8000/bills/create/
-2. Fill Customer Details:
-   - Name (required)
-   - Phone (required)
-   - City (optional)
-3. Add Items:
-   - Description (optional)
-   - Size (optional)
-   - Quantity (optional)
-   - Amount in ₹ (required)
-4. Set Payment Details:
-   - Discount in ₹ (optional)
-   - Extra Charges in ₹ (optional)
-   - Amount Paid / Advance (optional)
-5. Click "Generate Bill" or "Save"
-6. Bill created with auto-calculated totals
-```
+1. **`bill_print` URL is gone** — removed entirely. Never use `{% url 'bill_print' ... %}` in any template — it will crash the page with `NoReverseMatch` at render time (Django resolves `{% url %}` tags in template rendering, not just when called from JS).
 
-### Download PDF Invoice:
-```
-1. Go to bill detail page (/bills/N/)
-2. Click "Download" button
-3. PDF generated using invoice.html template
-4. Professional format with all sections
-5. Color-coded payment display
-```
+2. **Money is IntegerField** — all amounts (discount, extra_charges, paid_amount, BillItem.amount) are whole rupees. No decimal points anywhere in the system.
 
-### View Payment Status:
-```
-1. Invoice automatically shows:
-   - GREEN box if fully paid
-   - YELLOW + RED boxes if partial
-   - RED box if unpaid
-```
+3. **@property totals can't use F() expressions** — subtotal/total/due_amount are Python properties, not DB columns. All views that filter/sort by these must use `prefetch_related('items')` and Python list comprehensions.
 
-### Search Bills/Customers:
-```
-- Bills: Use search dropdown (AJAX)
-- Customers: Type in search box (live filter, no reload)
-- Both: No Enter key needed, instant results
-```
+4. **bill_number auto-increment** uses `Max('bill_number') + 1` — not thread-safe under very high concurrency (not an issue for local/single-user use).
 
-### Check Unpaid Bills:
-```
-1. Go to: http://localhost:8000/bills/unpaid/
-2. All unpaid bills listed
-3. Sorted by due amount and date
-```
+5. **Playwright must be installed separately** — `playwright install chromium`. If missing, `/bills/<pk>/pdf/` returns HTTP 500.
 
-### View Monthly Revenue:
+6. **WeasyPrint is in requirements.txt but NOT used** — leftover from an earlier version; Playwright is the actual PDF renderer.
+
+7. **ReportLab (`bill_generator.py`) is NOT routed** — exists in the codebase but no URL/view calls it.
+
+8. **Customer phone_number is unique** — attempting to create two customers with the same phone raises `IntegrityError`. The bill create/edit logic handles this by upsert logic (find existing → update, or create new).
+
+9. **Tom Select replaces the native `<select>`** — when TomSelect is initialized on `#id_customer`, the native select is hidden. The existing `change` event listener is preserved because TomSelect's `onChange` callback dispatches a native `change` event.
+
+10. **PDF from detail.html uses a clone** — `downloadInvoicePDF()` clones the invoice div into a `position:fixed; left:-9999px; width:794px` off-screen container. This is necessary because Bootstrap's column system constrains the rendered width, which caused left-cropping in earlier versions.
+
+---
+
+## INVOICE LAYOUT (print.html / detail.html)
+
 ```
-1. Go to: http://localhost:8000/bills/monthly-revenue/
-2. See revenue breakdown by month
++-------------------------------------------------------------+
+| [LOGO 90px]  Jalaram CNC Art & Craft              INVOICE   |
+|              Address, Phone                  Bill #: [auto] |
+|                                              Date:  [auto]  |
++-------------------------+-----------------------------------+
+| BILL TO                 |  Bill Number  :  #NNN             |
+| Customer Name           |  Date         :  DD Mon YYYY      |
+| Phone: XXXXXXXXXX       |  Payment      :  Paid/Partial/..  |
+| City                    |                                    |
++-------------------------+-----------------------------------+
+| #  | Description |    Size       |  Qty  |  Amount (Rs)     |
+| 1  | [text]      | [12x18 inch]  |   2   |       500        |
++-------------------------------------------------------------+
+|                         Sub Total    :          Rs NNN      |
+|                         Discount     :         -Rs NNN      |
+|                         Extra Charges:         +Rs NNN      |
+|                         TOTAL AMOUNT :          Rs NNN      |
++-------------------------------------------------------------+
+|  Amount in Words: Five Hundred Rupees Only                  |
++-------------------------------------------------------------+
+|  (if paid_amount > 0)  Advance Paid  :  Rs NNN              |
+|  (if due > 0)          Due Payment   :  Rs NNN              |
++-------------------------+-----------------------------------+
+| BANK DETAILS            |      [QR CODE 120px]              |
+| Bank : SBI, Kapadwanj   |  Scan to Pay                      |
+| A/C  : 36474515254      |                                    |
+| IFSC : SBIN0000287      |                                    |
++-------------------------+-----------------------------------+
 ```
 
 ---
 
-## 🧪 TESTING CHECKLIST
+## COMMON TASKS
 
-- [ ] Create bill with full payment → GREEN box appears
-- [ ] Create bill with partial payment → YELLOW + RED boxes appear
-- [ ] Create bill with no payment → RED box appears
-- [ ] Download PDF → Professional template displays
-- [ ] Print bill → Print preview shows correct format
-- [ ] Search bills → Live search works
-- [ ] Search customers → Live filter works
-- [ ] Edit bill → All fields load correctly
-- [ ] Delete bill → Confirmed with warning
-- [ ] View unpaid bills → Lists all unpaid items
-- [ ] Check tax field → NOT present in form
-- [ ] Verify discount displays → Shows only if > 0
-- [ ] Verify extra charges → Shows only if > 0
+### Run development server
+```bash
+.venv\Scripts\python.exe manage.py runserver
+```
 
----
+### Apply migrations after model changes
+```bash
+.venv\Scripts\python.exe manage.py makemigrations
+.venv\Scripts\python.exe manage.py migrate
+```
 
-## ✅ COMPLETION STATUS
+### Check for errors
+```bash
+.venv\Scripts\python.exe manage.py check
+```
 
-### Fully Implemented:
-✅ Professional invoice template  
-✅ Tax/GST field removed  
-✅ Payment tracking with color coding  
-✅ Discount and Extra Charges fields  
-✅ Advance Payment field  
-✅ Due Amount calculation  
-✅ Bank details display  
-✅ QR code placeholder  
-✅ Signature area  
-✅ Live search functionality  
-✅ Unpaid bills page  
-✅ Monthly revenue display  
-✅ PDF generation with WeasyPrint  
-✅ Professional styling and layout  
-✅ All bug fixes applied  
-
-### Not Implemented (Not Needed):
-❌ GST calculations (intentionally removed)  
-❌ Multiple currencies (INR only)  
-❌ Email notifications (future enhancement)  
-❌ Invoice numbering reset (uses continuous sequence)  
+### Access Django admin
+```
+http://127.0.0.1:8000/admin/
+```
+Create superuser first: `.venv\Scripts\python.exe manage.py createsuperuser`
 
 ---
 
-## 🔧 DEPLOYMENT CHECKLIST
+## VERSION HISTORY
 
-- [ ] Verify WeasyPrint installed: `pip list | grep weasyprint`
-- [ ] Run migrations: `python manage.py migrate`
-- [ ] Collect static files: `python manage.py collectstatic`
-- [ ] Start server: `python manage.py runserver`
-- [ ] Test all pages load without errors
-- [ ] Create test bill and verify PDF
-- [ ] Check payment boxes display correctly
-- [ ] Test live search on both pages
-- [ ] Deploy to production server
-
----
-
-## 📞 SUPPORT & TROUBLESHOOTING
-
-### PDF Not Downloading:
-- Check browser download folder
-- Verify WeasyPrint is installed
-- Check server logs for errors
-
-### Invoice Template Not Displaying:
-- Verify invoice.html exists in templates/bills/
-- Check Django template settings
-- Verify context variables in view
-
-### Payment Boxes Not Color-Coded:
-- Verify due_amount calculation in model
-- Check CSS styling in invoice.html
-- Verify Django context passes correct values
-
-### Live Search Not Working:
-- Check JavaScript console for errors
-- Verify AJAX endpoints are correct
-- Check CSS for search input visibility
-
----
-
-## 📚 KEY RESOURCES
-
-- **Django Docs**: https://docs.djangoproject.com/
-- **WeasyPrint Docs**: https://doc.courtbouillon.org/weasyprint/
-- **Bootstrap 5**: https://getbootstrap.com/docs/5.0/
-- **SQLite**: https://www.sqlite.org/
-
----
-
-## 🎯 FUTURE ENHANCEMENTS (Optional)
-
-1. Email invoice to customer
-2. SMS payment reminders
-3. Payment gateway integration
-4. Invoice templates customization
-5. Multi-currency support
-6. Expense tracking
-7. Profit/loss analysis
-8. Customer payment history
-9. Invoice templates by customer
-10. Recurring bills/subscriptions
-
----
-
-## 📝 NOTES FOR FUTURE DEVELOPERS
-
-1. **Tax Field**: The tax_rate field exists in database but is NOT used. If you need tax in future, uncomment the field in forms.py, but calculate in view (not database)
-
-2. **Quantity Field**: Tracked in form for records but NOT displayed on invoice. If needed, modify invoice.html template
-
-3. **Customer City**: Captured in form but NOT displayed on invoice. If needed, modify invoice.html template
-
-4. **Payment Boxes**: Color-coded in CSS. Modify invoice.html for different colors/styling
-
-5. **Bank Details**: Hardcoded in template. Make this a setting if you need multiple bank accounts
-
-6. **QR Code**: Currently placeholder. Use a QR code generation library if you want dynamic QR codes
-
-7. **WeasyPrint**: Requires specific system dependencies on some OS. Check documentation if PDF generation fails
-
----
-
-## 🔄 VERSION HISTORY
-
-| Date | Version | Changes |
-|------|---------|---------|
-| 2026-08-29 | 1.0 | Professional invoice template, removed tax, live search |
-| (earlier) | 0.9 | Initial bug fixes and form updates |
-
----
-
-**Created On**: August 29, 2026  
-**By**: Copilot  
-**Status**: Production Ready ✅  
-**Last Tested**: August 29, 2026  
-
----
-
-**For detailed implementation information, refer to individual files in the project structure.**
+| Date | Change |
+|---|---|
+| 2026-08-30 | Full PROJECT_MEMORY rewrite — accurate to actual codebase |
+| 2026-08-30 | Fixed: bill_print removal, extra_charges required error, encoding corruption (₹/—/→), Tom Select searchable dropdown, clone-based PDF, @media print CSS |
+| 2026-08-29 | html2pdf.js client-side PDF, inline invoice rendering on detail page, IntegerField migration, Paid-in-Full toggle |
+| 2026-08-29 | Initial: customers, bills, payment tracking, live search, Playwright PDF, professional invoice design |
