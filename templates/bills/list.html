@@ -89,10 +89,10 @@
                                    class="btn btn-outline-warning" title="Edit">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                <a href="{% url 'bill_pdf' bill.pk %}"
-                                   class="btn btn-outline-success" title="Download PDF">
+                                <button type="button" class="btn btn-outline-success" title="Download PDF"
+                                        onclick="quickPDF(this, {{ bill.pk }}, '{{ bill.bill_number }}')">
                                     <i class="bi bi-file-earmark-pdf"></i>
-                                </a>
+                                </button>
                                 <form method="post" action="{% url 'bill_delete' bill.pk %}"
                                       data-confirm-delete="bill {{ bill.bill_number }}" style="display: inline;">
                                     {% csrf_token %}
@@ -120,6 +120,25 @@
 </div>
 
 <script>
+// Quick PDF download without page navigation
+async function quickPDF(btn, pk, billNum) {
+  var orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+  try {
+    var resp = await fetch('/bills/' + pk + '/pdf/');
+    if (!resp.ok) throw new Error();
+    var blob = await resp.blob();
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'Bill-' + billNum + '.pdf';
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  } catch(e) { alert('Could not generate PDF.'); }
+  btn.disabled = false;
+  btn.innerHTML = orig;
+}
+
 // Live Search
 const liveSearch = document.getElementById('liveSearch');
 const searchResults = document.getElementById('searchResults');
