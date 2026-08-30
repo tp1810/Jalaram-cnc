@@ -105,13 +105,18 @@
   }
   .inv-qr-label { font-size: 10px; font-weight: 700; color: #555; letter-spacing: 0.5px; }
 
+  /* Suppress browser-injected date / URL / page-number text */
+  @page { size: A4; margin: 0; }
+
   @media print {
+    body { margin: 0 !important; padding: 0 !important; }
     .sidebar, .topbar, .messages-container { display: none !important; }
-    .main-wrapper { margin-left: 0 !important; }
+    .main-wrapper { margin-left: 0 !important; padding: 0 !important; }
     .page-content { padding: 0 !important; }
-    .d-flex.align-items-center.gap-2 { display: none !important; }
+    .container-fluid { padding: 0 !important; }
+    .d-flex.align-items-center.gap-2.mb-3 { display: none !important; }
     .inv-wrap { background: none !important; padding: 0 !important; border-radius: 0 !important; }
-    .inv-page { box-shadow: none !important; margin: 0 !important; width: 100% !important; }
+    .inv-page { box-shadow: none !important; margin: 0 !important; padding: 28px 32px !important; width: 100% !important; min-height: 100vh !important; }
   }
 </style>
 

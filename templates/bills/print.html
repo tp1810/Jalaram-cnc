@@ -159,6 +159,9 @@
         .qr-label { font-size: 10px; font-weight: 700; color: #555; letter-spacing: 0.5px; }
 
         /* PRINT */
+        /* Suppress browser-injected date / URL / page-number text */
+        @page { size: A4; margin: 0; }
+
         @media print {
             body { background: white; padding: 0; margin: 0; }
             .no-print { display: none !important; }
