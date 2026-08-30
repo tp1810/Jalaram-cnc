@@ -65,12 +65,18 @@
 
   .inv-amount-words {
     border: 1px solid #ddd; border-radius: 6px;
-    padding: 10px 14px; margin-bottom: 18px;
+    padding: 10px 14px; margin-bottom: 10px;
     background: #fafafa; font-size: 12px; color: #333;
   }
   .inv-amount-words strong {
     display: block; font-size: 10px; letter-spacing: 0.5px;
     text-transform: uppercase; color: #888; margin-bottom: 3px;
+  }
+
+  .inv-disclaimer {
+    font-size: 11px; color: #888; font-style: italic;
+    padding: 7px 14px; margin-bottom: 18px;
+    border-left: 3px solid #ccc;
   }
 
   .inv-footer {
@@ -172,18 +178,6 @@
             {% if bill.customer_city %}<br>&#127968; {{ bill.customer_city }}{% endif %}
           </div>
         </div>
-        <div class="inv-info-box">
-          <table>
-            <tr>
-              <td>Invoice #</td><td>:</td>
-              <td><strong>{{ bill.bill_number }}</strong></td>
-            </tr>
-            <tr>
-              <td>Date</td><td>:</td>
-              <td>{{ bill.created_at|date:"d M Y" }}</td>
-            </tr>
-          </table>
-        </div>
       </div>
 
       <!-- Items Table -->
@@ -243,6 +237,11 @@
       <div class="inv-amount-words">
         <strong>Amount in Words</strong>
         {{ amount_words }}
+      </div>
+
+      <!-- Disclaimer -->
+      <div class="inv-disclaimer">
+        &#9888; We will not be responsible for any material after leaving the office.
       </div>
 
       <!-- Footer -->
