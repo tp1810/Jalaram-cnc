@@ -109,10 +109,10 @@
                                            class="btn btn-outline-secondary" title="View">
                                             <i class="bi bi-eye"></i>
                                         </a>
-                                        <a href="{% url 'bill_pdf' bill.pk %}"
-                                           class="btn btn-outline-success" title="Download PDF">
+                                        <button type="button" class="btn btn-outline-success" title="Download PDF"
+                                                onclick="quickPDF(this, {{ bill.pk }}, '{{ bill.bill_number }}')">
                                             <i class="bi bi-file-earmark-pdf"></i>
-                                        </a>
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -132,4 +132,35 @@
 
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin="anonymous"></script>
+<script>
+async function quickPDF(btn, pk, billNum) {
+  var orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+  try {
+    var resp = await fetch('/bills/' + pk + '/');
+    var html = await resp.text();
+    var doc = new DOMParser().parseFromString(html, 'text/html');
+    var invoice = doc.getElementById('inv-page-content');
+    if (!invoice) throw new Error('Invoice not found');
+    var container = document.createElement('div');
+    container.style.cssText = 'position:fixed;left:0;top:0;width:794px;z-index:-1;opacity:0;pointer-events:none;';
+    doc.querySelectorAll('style').forEach(function(s) { container.appendChild(document.adoptNode(s)); });
+    invoice.style.cssText = 'width:794px;margin:0;box-shadow:none;background:white;padding:36px 40px 32px;';
+    container.appendChild(document.adoptNode(invoice));
+    document.body.appendChild(container);
+    await html2pdf().set({
+      margin: 0, filename: 'Bill-' + billNum + '.pdf',
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: 'avoid-all' }
+    }).from(invoice).save();
+    document.body.removeChild(container);
+  } catch(e) { alert('Could not generate PDF.'); }
+  btn.disabled = false;
+  btn.innerHTML = orig;
+}
+</script>
 {% endblock %}

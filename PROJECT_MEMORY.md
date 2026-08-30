@@ -123,7 +123,7 @@ playwright install chromium
 | Bootstrap Icons | 1.11.3 | base.html |
 | Google Fonts (Inter) | — | base.html |
 | SweetAlert2 | 11 | base.html |
-| html2pdf.js | 0.10.1 | bills/detail.html |
+| html2pdf.js | 0.10.1 | bills/detail.html, bills/list.html, customers/detail.html |
 | Tom Select (Bootstrap 5 theme) | 2.3.1 | bills/form.html |
 
 ---
@@ -217,7 +217,7 @@ All routes are in `core/urls.py`, mounted at `/` via `jalaram_cnc/urls.py`.
 | `/bills/<pk>/` | `bill_detail` | Inline invoice | PDF/Print/Share buttons |
 | `/bills/<pk>/edit/` | `bill_edit` | Edit form | |
 | `/bills/<pk>/delete/` | `bill_delete` | POST only | |
-| `/bills/<pk>/pdf/` | `bill_pdf` | Playwright PDF | Downloads PDF file |
+| `/bills/<pk>/pdf/` | `bill_pdf` | Playwright PDF | Server-side fallback (not used by UI buttons) |
 
 > `bill_print` URL **does not exist** — it was removed. Do not reference `{% url 'bill_print' %}` anywhere.
 
@@ -241,8 +241,9 @@ All routes are in `core/urls.py`, mounted at `/` via `jalaram_cnc/urls.py`.
 **`bill_pdf`** — Playwright server-side PDF:
 - Renders `bills/print.html` with `is_preview=True`, `logo_b64`, `qr_b64`
 - Opens Chromium headless, sets HTML content, exports PDF (A4, no margins)
-- Returns `application/pdf` inline response
+- Returns `application/pdf` attachment response
 - If Playwright fails → returns HTTP 500 with error text
+- **Not used by any UI button** — all PDF downloads use client-side html2pdf.js instead (much faster)
 
 **`dashboard`** — uses `prefetch_related('items')` + Python list comprehension (F() expressions can't be used on @property fields)
 
@@ -282,11 +283,17 @@ All routes are in `core/urls.py`, mounted at `/` via `jalaram_cnc/urls.py`.
 - Action buttons: Back, Edit, Download PDF, Print, Share, Delete
 - **Print button**: `onclick="window.print()"` — prints the current page directly
 - **@media print CSS**: hides sidebar, topbar, action bar; renders only the invoice
-- **`downloadInvoicePDF()`**: clones `#inv-page-content` into off-screen `position:fixed; left:-9999px; width:794px` container to avoid Bootstrap column width constraints, then uses html2pdf.js
-- **`shareBill()`**: same clone approach, generates PDF blob, uses Web Share API; falls back to download
-- `pdfOpts()`: `margin:0, scale:2, useCORS:true, pagebreak:{mode:'avoid-all'}, jsPDF:{format:'a4'}`
+- **`downloadInvoicePDF()`**: uses html2pdf.js with `onclone` callback to hide sidebar/topbar in the render context, then captures `#inv-page-content` directly (no manual cloning needed)
+- **`shareBill()`**: same approach, generates PDF blob, uses Web Share API; falls back to download
+- `pdfOpts()`: `margin:0, scale:2, useCORS:true, onclone:hides sidebar/topbar, pagebreak:{mode:'avoid-all'}, jsPDF:{format:'a4'}`
 - `BILL_NUM` JS variable set from `{{ bill.bill_number }}`
 - Amount in words displayed via `{{ amount_words }}` context variable
+
+### `bills/list.html`
+- PDF download button uses `quickPDF()`: fetches detail page HTML, extracts `#inv-page-content` + styles via DOMParser, renders in hidden container with html2pdf.js (fast, no Playwright)
+
+### `customers/detail.html`
+- Same `quickPDF()` approach as bills/list.html for PDF download buttons
 
 ### `bills/print.html`
 - Standalone page with full invoice (no base.html extends)
@@ -357,9 +364,9 @@ Available in every template as `{{ today }}` and `{{ business_name }}`.
 
 4. **bill_number auto-increment** uses `Max('bill_number') + 1` — not thread-safe under very high concurrency (not an issue for local/single-user use).
 
-5. **Playwright must be installed separately** — `playwright install chromium`. If missing, `/bills/<pk>/pdf/` returns HTTP 500.
+5. **Playwright is optional** — `playwright install chromium`. The `/bills/<pk>/pdf/` endpoint still exists but is not used by any UI button. All PDF downloads use client-side html2pdf.js.
 
-6. **WeasyPrint is in requirements.txt but NOT used** — leftover from an earlier version; Playwright is the actual PDF renderer.
+6. **WeasyPrint is in requirements.txt but NOT used** — leftover from an earlier version.
 
 7. **ReportLab (`bill_generator.py`) is NOT routed** — exists in the codebase but no URL/view calls it.
 
@@ -367,7 +374,9 @@ Available in every template as `{{ today }}` and `{{ business_name }}`.
 
 9. **Tom Select replaces the native `<select>`** — when TomSelect is initialized on `#id_customer`, the native select is hidden. The existing `change` event listener is preserved because TomSelect's `onChange` callback dispatches a native `change` event.
 
-10. **PDF from detail.html uses a clone** — `downloadInvoicePDF()` clones the invoice div into a `position:fixed; left:-9999px; width:794px` off-screen container. This is necessary because Bootstrap's column system constrains the rendered width, which caused left-cropping in earlier versions.
+10. **PDF from detail.html uses `onclone`** — `downloadInvoicePDF()` uses html2pdf.js `onclone` callback to hide sidebar/topbar/wrapper in the cloned document before html2canvas renders. This avoids the left-cropping caused by the 240px sidebar reducing content width below the 794px invoice width.
+
+11. **PDF from list/customer pages uses fetch+parse** — `quickPDF()` fetches the detail page HTML, extracts `#inv-page-content` + `<style>` blocks via DOMParser, renders in an isolated hidden container. Fast (~0.5s) because no Playwright/server-side rendering.
 
 ---
 
@@ -436,6 +445,7 @@ Create superuser first: `.venv\Scripts\python.exe manage.py createsuperuser`
 
 | Date | Change |
 |---|---|
+| 2026-08-30 | PDF download switched to client-side html2pdf.js everywhere (detail, list, customer detail). Playwright endpoint kept as fallback but no UI uses it. Fixed left-cropping via onclone (detail) and fetch+parse (list/customer). |
 | 2026-08-30 | Full PROJECT_MEMORY rewrite — accurate to actual codebase |
 | 2026-08-30 | Fixed: bill_print removal, extra_charges required error, encoding corruption (₹/—/→), Tom Select searchable dropdown, clone-based PDF, @media print CSS |
 | 2026-08-29 | html2pdf.js client-side PDF, inline invoice rendering on detail page, IntegerField migration, Paid-in-Full toggle |
