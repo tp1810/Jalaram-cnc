@@ -1,43 +1,35 @@
 ==============================================================
-  DOWNLOAD THESE TWO FILES BEFORE CREATING THE ZIP
+  ONLY ONE FILE NEEDED — nssm.exe
 ==============================================================
 
-Place both files in this folder (install\tools\) before
-zipping the project and sending it to your friend.
+Python 3.14 must already be installed on the laptop.
+Only nssm.exe is required in this folder.
 
 ──────────────────────────────────────────────────────────────
-FILE 1:  uv.exe
+FILE:  nssm.exe
 ──────────────────────────────────────────────────────────────
-What it does:  Installs Python and Python packages (no pip needed)
-Download URL:  https://github.com/astral-sh/uv/releases/latest
-
-Steps:
-  1. Go to the URL above
-  2. Under "Assets", download:  uv-x86_64-pc-windows-msvc.zip
-  3. Open the ZIP
-  4. Copy  uv.exe  into this folder (install\tools\uv.exe)
-
-──────────────────────────────────────────────────────────────
-FILE 2:  nssm.exe
-──────────────────────────────────────────────────────────────
-What it does:  Installs the app as a Windows Service (auto-start)
+What it does:  Makes the app start automatically on Windows boot
 Download URL:  https://nssm.cc/download
 
 Steps:
-  1. Go to the URL above
-  2. Download:  nssm 2.24 (2014-08-31)  ZIP file
-  3. Open the ZIP
-  4. Go into the  win64\  folder inside the ZIP
-  5. Copy  nssm.exe  into this folder (install\tools\nssm.exe)
+  1. On the friend's laptop, open a browser
+  2. Go to the URL above
+  3. Download:  nssm-2.24.zip
+  4. Open the ZIP
+  5. Go into the  win64\  folder
+  6. Copy  nssm.exe  into this folder:
+         C:\JalaramCNC\install\tools\nssm.exe
 
 ──────────────────────────────────────────────────────────────
-FINAL STRUCTURE (before zipping):
+FINAL STRUCTURE before running install.bat:
 ──────────────────────────────────────────────────────────────
 
   install\
   └── tools\
-      ├── uv.exe        ← downloaded (step 1)
-      ├── nssm.exe      ← downloaded (step 2)
-      └── DOWNLOAD_THESE.txt  (this file)
+      ├── nssm.exe          ← download this
+      └── DOWNLOAD_THESE.txt
+
+NOTE: uv.exe is no longer needed.
+      Python 3.14 is used directly from the system installation.
 
 ==============================================================
