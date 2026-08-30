@@ -1,0 +1,43 @@
+==============================================================
+  DOWNLOAD THESE TWO FILES BEFORE CREATING THE ZIP
+==============================================================
+
+Place both files in this folder (install\tools\) before
+zipping the project and sending it to your friend.
+
+──────────────────────────────────────────────────────────────
+FILE 1:  uv.exe
+──────────────────────────────────────────────────────────────
+What it does:  Installs Python and Python packages (no pip needed)
+Download URL:  https://github.com/astral-sh/uv/releases/latest
+
+Steps:
+  1. Go to the URL above
+  2. Under "Assets", download:  uv-x86_64-pc-windows-msvc.zip
+  3. Open the ZIP
+  4. Copy  uv.exe  into this folder (install\tools\uv.exe)
+
+──────────────────────────────────────────────────────────────
+FILE 2:  nssm.exe
+──────────────────────────────────────────────────────────────
+What it does:  Installs the app as a Windows Service (auto-start)
+Download URL:  https://nssm.cc/download
+
+Steps:
+  1. Go to the URL above
+  2. Download:  nssm 2.24 (2014-08-31)  ZIP file
+  3. Open the ZIP
+  4. Go into the  win64\  folder inside the ZIP
+  5. Copy  nssm.exe  into this folder (install\tools\nssm.exe)
+
+──────────────────────────────────────────────────────────────
+FINAL STRUCTURE (before zipping):
+──────────────────────────────────────────────────────────────
+
+  install\
+  └── tools\
+      ├── uv.exe        ← downloaded (step 1)
+      ├── nssm.exe      ← downloaded (step 2)
+      └── DOWNLOAD_THESE.txt  (this file)
+
+==============================================================

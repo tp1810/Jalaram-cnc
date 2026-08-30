@@ -1,5 +1,10 @@
 import base64
+import datetime
 import os
+import platform
+import shutil
+import subprocess
+import sys
 from io import BytesIO
 
 from django.conf import settings as _settings
@@ -518,3 +523,91 @@ def live_search_customers(request):
     } for customer in customers[:20]]
     
     return JsonResponse({'results': results})
+
+# ────────────────────────── SYSTEM HEALTH ───────────────────────────
+
+def system_health(request):
+    # ─ Database
+    db_ok = False
+    db_size_kb = 0
+    try:
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT 1')
+        db_ok = True
+        db_path = _settings.BASE_DIR / 'db.sqlite3'
+        if db_path.exists():
+            db_size_kb = db_path.stat().st_size // 1024
+    except Exception:
+        pass
+
+    # ─ Backups
+    backup_daily_dir = _settings.BASE_DIR / 'backups' / 'daily'
+    backup_monthly_dir = _settings.BASE_DIR / 'backups' / 'monthly'
+    daily_backups = sorted(backup_daily_dir.glob('db_*.sqlite3'), reverse=True) if backup_daily_dir.exists() else []
+    monthly_backups = sorted(backup_monthly_dir.glob('db_*.sqlite3'), reverse=True) if backup_monthly_dir.exists() else []
+    last_backup = None
+    last_backup_size_kb = 0
+    if daily_backups:
+        last_backup = datetime.datetime.fromtimestamp(daily_backups[0].stat().st_mtime)
+        last_backup_size_kb = daily_backups[0].stat().st_size // 1024
+
+    # ─ Backup log last line
+    last_backup_log = None
+    log_path = _settings.BASE_DIR / 'logs' / 'backup.log'
+    if log_path.exists():
+        try:
+            lines = [l for l in log_path.read_text(encoding='utf-8').splitlines() if l.strip()]
+            last_backup_log = lines[-1] if lines else None
+        except Exception:
+            pass
+
+    # ─ Disk
+    disk_free_gb = disk_total_gb = None
+    try:
+        d = shutil.disk_usage(str(_settings.BASE_DIR))
+        disk_free_gb = round(d.free / (1024 ** 3), 1)
+        disk_total_gb = round(d.total / (1024 ** 3), 1)
+    except Exception:
+        pass
+
+    # ─ OneDrive detection
+    onedrive_path = os.environ.get('ONEDRIVE') or str(_settings.BASE_DIR.home() / 'OneDrive')
+    onedrive_ok = os.path.isdir(onedrive_path)
+
+    return render(request, 'system_health.html', {
+        'db_ok': db_ok,
+        'db_size_kb': db_size_kb,
+        'last_backup': last_backup,
+        'last_backup_size_kb': last_backup_size_kb,
+        'daily_count': len(daily_backups),
+        'monthly_count': len(monthly_backups),
+        'last_backup_log': last_backup_log,
+        'disk_free_gb': disk_free_gb,
+        'disk_total_gb': disk_total_gb,
+        'onedrive_ok': onedrive_ok,
+        'debug_mode': _settings.DEBUG,
+        'python_version': platform.python_version(),
+        'platform_info': platform.platform(),
+    })
+
+
+def run_backup_now(request):
+    """Trigger an on-demand backup from the System Health page (POST only)."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    script = _settings.BASE_DIR / 'scripts' / 'backup.py'
+    try:
+        result = subprocess.run(
+            [sys.executable, str(script)],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=str(_settings.BASE_DIR),
+        )
+        output = (result.stdout + result.stderr).strip()
+        return JsonResponse({'success': result.returncode == 0, 'output': output})
+    except subprocess.TimeoutExpired:
+        return JsonResponse({'success': False, 'output': 'Backup timed out after 120 seconds.'})
+    except Exception as exc:
+        return JsonResponse({'success': False, 'output': str(exc)})

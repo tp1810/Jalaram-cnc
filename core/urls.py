@@ -15,6 +15,10 @@ urlpatterns = [
     path('customers/<int:pk>/delete/', views.customer_delete, name='customer_delete'),
     path('customers/<int:pk>/api/', views.customer_api, name='customer_api'),
 
+    # System
+    path('system-health/', views.system_health, name='system_health'),
+    path('system-health/backup-now/', views.run_backup_now, name='run_backup_now'),
+
     # Bills
     path('bills/', views.bill_list, name='bill_list'),
     path('bills/create/', views.bill_create, name='bill_create'),

@@ -62,6 +62,14 @@
             <i class="bi bi-plus-circle-fill"></i>
             <span>Create Bill</span>
         </a>
+
+        <div class="nav-section-label">System</div>
+
+        <a href="{% url 'system_health' %}"
+           class="nav-item {% if request.resolver_match.url_name == 'system_health' %}active{% endif %}">
+            <i class="bi bi-heart-pulse-fill"></i>
+            <span>System Health</span>
+        </a>
     </nav>
 
     <div class="sidebar-footer">
