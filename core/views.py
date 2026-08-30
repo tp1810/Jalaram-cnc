@@ -467,7 +467,7 @@ def bill_pdf(request, pk):
             browser.close()
 
         response = HttpResponse(pdf_bytes, content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="Bill-{bill.bill_number}.pdf"'
+        response['Content-Disposition'] = f'attachment; filename="Bill-{bill.bill_number}.pdf"'
         return response
     except Exception as e:
         return HttpResponse(f'Error generating PDF: {e}', status=500)

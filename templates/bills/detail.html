@@ -119,13 +119,13 @@
     <a href="{% url 'bill_edit' bill.pk %}" class="btn btn-warning btn-sm">
       <i class="bi bi-pencil"></i> Edit
     </a>
-    <button id="dl-btn" class="btn btn-primary btn-sm" onclick="downloadInvoicePDF()">
+    <button id="dl-btn" type="button" class="btn btn-primary btn-sm" onclick="downloadInvoicePDF()">
       <i class="bi bi-file-earmark-pdf"></i> Download PDF
     </button>
-    <button class="btn btn-info btn-sm text-white" onclick="window.print()">
+    <button type="button" class="btn btn-info btn-sm text-white" onclick="window.print()">
       <i class="bi bi-printer"></i> Print
     </button>
-    <button class="btn btn-outline-secondary btn-sm" onclick="shareBill()">
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="shareBill()">
       <i class="bi bi-share"></i> Share
     </button>
     <div class="ms-auto">
@@ -277,61 +277,53 @@
 
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin="anonymous"></script>
 <script>
 var BILL_NUM = '{{ bill.bill_number }}';
+var PDF_URL = '{% url "bill_pdf" bill.pk %}';
 
-function pdfOpts(filename) {
-  return {
-    margin: 0,
-    filename: filename,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, windowWidth: 900, logging: false },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    pagebreak: { mode: 'avoid-all' }
-  };
-}
-
-function downloadInvoicePDF() {
+async function downloadInvoicePDF() {
   var btn = document.getElementById('dl-btn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Generating...';
-  var source = document.getElementById('inv-page-content');
-  var container = document.createElement('div');
-  container.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:white;z-index:-9999;';
-  var clone = source.cloneNode(true);
-  clone.style.boxShadow = 'none';
-  clone.style.margin = '0';
-  document.body.appendChild(container);
-  container.appendChild(clone);
-  html2pdf().set(pdfOpts('Bill-' + BILL_NUM + '.pdf')).from(clone).save().then(function() {
-    document.body.removeChild(container);
-    btn.disabled = false;
-    btn.innerHTML = '<i class="bi bi-file-earmark-pdf"></i> Download PDF';
-  });
+  try {
+    var resp = await fetch(PDF_URL);
+    if (!resp.ok) throw new Error('Server error');
+    var blob = await resp.blob();
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'Bill-' + BILL_NUM + '.pdf';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch(e) {
+    alert('Could not generate PDF. Please ensure Playwright is installed.');
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<i class="bi bi-file-earmark-pdf"></i> Download PDF';
 }
 
 async function shareBill() {
-  var source = document.getElementById('inv-page-content');
-  var container = document.createElement('div');
-  container.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:white;z-index:-9999;';
-  var clone = source.cloneNode(true);
-  clone.style.boxShadow = 'none';
-  clone.style.margin = '0';
-  document.body.appendChild(container);
-  container.appendChild(clone);
   try {
-    var blob = await html2pdf().set(pdfOpts('Bill-' + BILL_NUM + '.pdf')).from(clone).outputPdf('blob');
-    document.body.removeChild(container);
+    var resp = await fetch(PDF_URL);
+    if (!resp.ok) throw new Error('Server error');
+    var blob = await resp.blob();
     var file = new File([blob], 'Bill-' + BILL_NUM + '.pdf', { type: 'application/pdf' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({ files: [file], title: 'Bill #' + BILL_NUM });
     } else {
-      downloadInvoicePDF();
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'Bill-' + BILL_NUM + '.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     }
   } catch(e) {
-    if (document.body.contains(container)) document.body.removeChild(container);
-    downloadInvoicePDF();
+    alert('Could not generate PDF for sharing.');
   }
 }
 </script>
