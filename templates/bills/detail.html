@@ -74,9 +74,9 @@
   }
 
   .inv-disclaimer {
-    font-size: 11px; color: #888; font-style: italic;
+    font-size: 11px; color: #1a1a1a; font-style: italic; font-weight: 700;
     padding: 7px 14px; margin-bottom: 18px;
-    border-left: 3px solid #ccc;
+    border-left: 3px solid #555;
   }
 
   .inv-footer {
@@ -109,6 +109,8 @@
   @page { size: A4; margin: 0; }
 
   @media print {
+    /* Force background colors and images to print */
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     body { margin: 0 !important; padding: 0 !important; }
     .sidebar, .topbar, .messages-container { display: none !important; }
     .main-wrapper { margin-left: 0 !important; padding: 0 !important; }
