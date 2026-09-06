@@ -9,13 +9,14 @@ Usage:
 """
 import getpass
 import hashlib
-from pathlib import Path
 
-SCRIPT_DIR   = Path(__file__).resolve().parent
-HASH_FILE    = SCRIPT_DIR / '.db_password_hash'
+from jalaram_cnc.runtime_paths import DATA_DIR, ensure_data_dirs
+
+HASH_FILE = DATA_DIR / '.db_password_hash'
 
 
 def main() -> None:
+    ensure_data_dirs()
     print('=' * 45)
     print('  Set Database Delete Password')
     print('=' * 45)

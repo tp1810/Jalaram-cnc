@@ -6,10 +6,16 @@ __pycache__/
 
 # Django
 *.log
+logs/
+backups/
 db.sqlite3
 db.sqlite3-journal
 staticfiles/
 media/
+build/
+dist/
+packaging/output/
+packaging/tools/
 
 # Environment
 .env

@@ -1,15 +1,18 @@
-﻿# JALARAM CNC — PROJECT MEMORY & DOCUMENTATION
+# JALARAM CNC - PROJECT MEMORY & OPERATIONS
 
-**Last Updated**: August 30, 2026 (evening)  
-**Project**: Jalaram CNC Bill Management System  
-**Framework**: Django 6.0.5, Python 3.x  
-**Database**: SQLite (`db.sqlite3`)  
-**Package Manager**: `uv` (venv at `.venv/`)  
-**Status**: Active / Production-ready for local use
+**Last Updated**: September 6, 2026
+**Current Release**: 1.0.1
+**Project**: Jalaram CNC Bill Management System
+**Framework**: Django 6.0.5 / Python 3.14
+**Production Server**: Waitress on `127.0.0.1:8000`
+**Database**: SQLite
+**Development Package Manager**: `uv`
+**Distribution**: PyInstaller `onedir` + WinSW + Inno Setup
+**Status**: Offline Windows production build
 
 ---
 
-## BUSINESS DETAILS (hardcoded in templates)
+## BUSINESS DETAILS
 
 | Field | Value |
 |---|---|
@@ -20,146 +23,452 @@
 | Account No | 36474515254 |
 | IFSC | SBIN0000287 |
 
-Logo: `static/images/logo.jpeg`  
-QR Code: `static/images/qr_code.jpeg`
+- Logo: `static/images/logo.jpeg`
+- Payment QR: `static/images/qr_code.jpeg`
 
 ---
 
-## HOW TO RUN
+## CURRENT ARCHITECTURE
 
-```bash
-# First time setup
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-playwright install chromium       # needed for /bills/<pk>/pdf/
-python manage.py migrate
-python manage.py runserver
+```text
+Browser at http://127.0.0.1:8000
+        |
+        v
+Waitress local WSGI server
+        |
+        v
+Django application
+        |
+        v
+SQLite database in C:\ProgramData\JalaramCNC
 ```
 
-Or with `uv`:
-```bash
-uv pip install -r requirements.txt
-```
-
-App runs at: `http://127.0.0.1:8000/`
+- The installed application is local-only and binds to `127.0.0.1`.
+- No domain, hosting, internet connection, or database server is required.
+- `JalaramCNCService` starts the app automatically through WinSW.
+- WinSW restarts the packaged process after failures.
+- WhiteNoise serves collected static files in production.
+- Browser libraries and fonts are bundled under `static/vendor` for offline use.
+- PDF creation is browser-side with bundled html2pdf.js.
+- Playwright, Chromium, WeasyPrint, and ReportLab are not runtime dependencies.
 
 ---
 
-## PROJECT STRUCTURE
+## DEVELOPMENT AND INSTALLED PATHS
 
+### Development checkout
+
+When Python is not frozen, writable data remains in the repository:
+
+```text
+Jalaram CNC\
+|- db.sqlite3
+|- .env
+|- logs\
+|- backups\
+`- media\
 ```
-Jalaram CNC/
-+-- db.sqlite3
-+-- manage.py
-+-- main.py
-+-- requirements.txt
-+-- setup.bat
-+-- biomedix_invoice_template.html   # reference design only
-+-- PROJECT_MEMORY.md
-|
-+-- core/                            # main Django app
-|   +-- models.py
-|   +-- views.py
-|   +-- forms.py
-|   +-- urls.py
-|   +-- admin.py
-|   +-- apps.py
-|   +-- context_processors.py
-|   +-- bill_generator.py            # ReportLab helper (NOT used by any URL)
-|   +-- migrations/
-|       +-- 0001_initial.py
-|       +-- 0002_payment_fields.py
-|
-+-- jalaram_cnc/                     # Django project settings
-|   +-- settings.py
-|   +-- urls.py
-|   +-- wsgi.py
-|
-+-- templates/
-|   +-- base.html
-|   +-- dashboard.html
-|   +-- bills/
-|   |   +-- list.html
-|   |   +-- detail.html              # inline invoice + html2pdf.js
-|   |   +-- form.html                # create/edit with Tom Select
-|   |   +-- print.html               # used by bill_pdf (Playwright)
-|   |   +-- invoice.html             # older standalone template (kept)
-|   |   +-- pdf_template.html        # legacy (kept for compatibility)
-|   |   +-- unpaid.html
-|   |   +-- monthly_revenue.html
-|   +-- customers/
-|       +-- list.html
-|       +-- detail.html
-|       +-- form.html
-|
-+-- static/
-    +-- css/style.css
-    +-- images/
-        +-- logo.jpeg
-        +-- qr_code.jpeg
+
+### Installed application files
+
+```text
+C:\Program Files\Jalaram CNC\
+|- JalaramCNC.exe
+|- JalaramCNCService.exe
+|- JalaramCNCService.xml
+|- Jalaram CNC.url
+`- _internal\
 ```
+
+### Installed persistent data
+
+```text
+C:\ProgramData\JalaramCNC\
+|- db.sqlite3
+|- configuration.env
+|- .db_password_hash        # only after setting a delete password
+|- logs\
+|  |- app.log
+|  |- error.log
+|  |- backup.log
+|  `- WinSW service logs
+|- media\
+`- backups\
+   |- daily\
+   `- monthly\
+```
+
+`jalaram_cnc/runtime_paths.py` owns source/frozen path selection. Use `JALARAM_CNC_DATA_DIR` only for isolated tests or support work.
 
 ---
 
-## DEPENDENCIES
+## DEVELOPMENT SETUP
 
-### Python (`requirements.txt`)
+```powershell
+uv venv --python 3.14
+uv pip install --python .venv\Scripts\python.exe -r requirements.txt
+.\.venv\Scripts\python.exe manage.py migrate
+.\.venv\Scripts\python.exe manage.py runserver
 ```
+
+Development URL:
+
+```text
+http://127.0.0.1:8000
+```
+
+Runtime dependencies:
+
+```text
 Django==6.0.5
-reportlab>=3.6.13     # used in bill_generator.py (NOT routed — legacy)
 pillow
-weasyprint>=60.0      # in requirements but NOT used (Playwright replaced it)
-```
-**Playwright** is used for server-side PDF but is installed separately:
-```bash
-playwright install chromium
+waitress>=3.0.0
+python-dotenv>=1.0.0
+whitenoise>=6.7.0
 ```
 
-### Frontend CDNs (in templates)
-| Library | Version | Used In |
-|---|---|---|
-| Bootstrap 5 | 5.3.2 | base.html |
-| Bootstrap Icons | 1.11.3 | base.html |
-| Google Fonts (Inter) | — | base.html |
-| SweetAlert2 | 11 | base.html |
-| html2pdf.js | 0.10.1 | bills/detail.html, bills/list.html, customers/detail.html |
-| Tom Select (Bootstrap 5 theme) | 2.3.1 | bills/form.html |
+Build dependency:
+
+```text
+pyinstaller==6.22.2
+```
+
+---
+
+## CREATING THE WINDOWS EXE INSTALLER
+
+### Build command
+
+```powershell
+.\build_installer.ps1 -Version 1.0.1
+```
+
+Or run:
+
+```text
+build_installer.bat
+```
+
+`create_deployment.bat` now forwards to `build_installer.bat`; it no longer creates the old source ZIP.
+
+### Build pipeline
+
+1. Installs runtime requirements into `.venv` with `uv`.
+2. Installs the pinned PyInstaller build requirements.
+3. Runs `manage.py check`.
+4. Runs `collectstatic --clear`.
+5. Downloads WinSW 2.12.0 if it is not cached in `packaging/tools`.
+6. Runs PyInstaller using `packaging/JalaramCNC.spec`.
+7. Adds WinSW and `JalaramCNCService.xml` to the frozen output.
+8. Finds Inno Setup 6, installing it with `winget` when necessary.
+9. Compiles `packaging/installer.iss`.
+
+PyInstaller command used by the script:
+
+```powershell
+.\.venv\Scripts\python.exe -m PyInstaller --noconfirm --clean packaging\JalaramCNC.spec
+```
+
+Final distributable:
+
+```text
+packaging\output\JalaramCNC-Setup.exe
+```
+
+Send only `JalaramCNC-Setup.exe` to the destination laptop. Do not send `dist`, source files, Python, `.env`, `uv`, or a source ZIP.
+
+### Release version checklist
+
+Synchronize the version in:
+
+- `jalaram_cnc/cli.py` - `APP_VERSION`
+- `pyproject.toml` - `project.version`
+- `packaging/installer.iss` - default `MyAppVersion`
+- `build_installer.ps1` - default `Version`
+
+Then run:
+
+```powershell
+uv lock
+.\build_installer.ps1 -Version <new-version>
+```
+
+Verify the artifact:
+
+```powershell
+Get-Item packaging\output\JalaramCNC-Setup.exe |
+    Select-Object FullName, Length, LastWriteTime, VersionInfo
+Get-FileHash packaging\output\JalaramCNC-Setup.exe -Algorithm SHA256
+```
+
+Do not manually edit `build` or `dist`; both are generated.
+
+### Git tracking for reproducible builds
+
+Commit these build inputs:
+
+```text
+app.py
+build_installer.ps1
+build_installer.bat
+create_deployment.bat
+requirements.txt
+requirements-build.txt
+pyproject.toml
+uv.lock
+packaging\installer.iss
+packaging\JalaramCNC.spec
+packaging\JalaramCNCService.xml
+static\css\
+static\images\
+static\vendor\
+templates\
+core\
+jalaram_cnc\
+scripts\
+```
+
+`static/vendor` must be committed because it contains the browser assets required for offline operation. It is source input, not generated output.
+
+Keep these generated/private paths ignored:
+
+```text
+.venv\
+.env
+db.sqlite3
+logs\
+backups\
+media\
+staticfiles\
+build\
+dist\
+packaging\tools\
+packaging\output\
+```
+
+`packaging/tools/WinSW-x64.exe` is downloaded automatically by the build script. `packaging/output/JalaramCNC-Setup.exe` is a release artifact for direct distribution, not required in Git. A clean clone can recreate both by running the build command.
+
+---
+
+## INSTALLER BEHAVIOR
+
+Stable Inno Setup AppId:
+
+```text
+{B0C97A31-49E9-4F38-9377-31969E8D0F0E}
+```
+
+The double opening brace in `AppId={{...}` is valid Inno Setup syntax for a literal GUID brace.
+
+### Fresh installation
+
+The user double-clicks `JalaramCNC-Setup.exe`, approves UAC, and clicks Install. The installer:
+
+1. Creates `C:\ProgramData\JalaramCNC` and its subfolders.
+2. Imports `C:\JalaramCNC\db.sqlite3` only if an installed database does not exist.
+3. Generates `configuration.env` with a random Django secret and localhost settings.
+4. Detects OneDrive when available and configures an optional mirror.
+5. Runs Django migrations.
+6. Creates and verifies an initial backup.
+7. Installs `JalaramCNCService` through WinSW.
+8. Configures immediate Automatic startup and restart-on-failure recovery.
+9. Starts the service and waits up to 30 seconds for HTTP 200.
+10. Creates Desktop and Start Menu shortcuts.
+11. Offers to open `http://127.0.0.1:8000`.
+
+No Python, `.env`, manual folders, commands, service setup, or Task Scheduler setup is required on the destination laptop.
+
+### Upgrade/reinstall
+
+Run the newer installer directly over the current installation. Do not uninstall first.
+
+- The stable AppId upgrades the existing installation instead of duplicating it.
+- The installer stops the current service.
+- The existing executable creates a verified pre-upgrade backup.
+- Application files are replaced.
+- Database, configuration, logs, media, and backups remain in `ProgramData`.
+- Migrations run before the new service starts.
+- Legacy `JalaramCNC_DailyBackup` and `JalaramCNC_StartupBackup` tasks are removed.
+
+### Uninstall
+
+The uninstaller removes the service and legacy tasks. Business data under `C:\ProgramData\JalaramCNC` is retained. Back up the database before manually deleting that directory.
+
+### Migrating the old source installation
+
+For a laptop with `C:\JalaramCNC`:
+
+1. Make an extra copy of `C:\JalaramCNC\db.sqlite3`.
+2. Leave the original database in place.
+3. Run the current installer.
+4. Confirm customers and bills in the installed app.
+5. Restart Windows and verify the Desktop shortcut.
+6. Delete `C:\JalaramCNC` only after successful verification.
+
+---
+
+## WINDOWS SERVICE AND FAST STARTUP
+
+Service name:
+
+```text
+JalaramCNCService
+```
+
+WinSW launches:
+
+```text
+JalaramCNC.exe serve
+```
+
+Behavior:
+
+- Startup type is `Automatic`, not delayed automatic.
+- Waitress binds `127.0.0.1:8000` immediately.
+- Backup work does not block the web server.
+- WinSW retries failures after 5, 15, and 30 seconds.
+- The installer uses `JalaramCNC.exe wait-ready` and fails if HTTP 200 is not returned within 30 seconds.
+
+Do not reintroduce `delayed-auto`; it caused a normal Windows delay of roughly 1-2 minutes before port 8000 became available.
+
+---
+
+## BACKUP SYSTEM
+
+Automatic backups do not use Windows Task Scheduler in release 1.0.1.
+
+### Automatic flow
+
+1. Waitress starts immediately.
+2. A daemon backup worker waits 10 seconds.
+3. It checks for a valid daily backup newer than 24 hours.
+4. If none exists, it creates and verifies a backup.
+5. It repeats the check every hour while the service runs.
+
+If the laptop was off when a backup became due, the next startup creates one shortly after the app becomes available.
+
+### Backup safety
+
+- Uses SQLite's online backup API while Django is running.
+- Writes to a temporary file first.
+- Runs `PRAGMA integrity_check` before publishing the backup.
+- Removes the temporary file on failure.
+- Applies OneDrive mirroring and retention only after verification.
+- Backup failures are logged and do not stop Waitress.
+
+### Local locations
+
+```text
+C:\ProgramData\JalaramCNC\backups\daily
+C:\ProgramData\JalaramCNC\backups\monthly
+```
+
+### Retention
+
+- Daily backups older than 30 days are removed after a successful backup.
+- A monthly copy is created when a backup runs on the first day of a month.
+- The newest 12 monthly copies are retained.
+
+### OneDrive
+
+OneDrive is optional. When detected during first configuration, backups are also copied to:
+
+```text
+<OneDrive>\JalaramCNC_Backups\daily
+<OneDrive>\JalaramCNC_Backups\monthly
+```
+
+If OneDrive is missing or mirroring fails, verified local backups remain valid and the application continues.
+
+### Manual backup
+
+- Use **System Health > Backup Now**, or
+- Run `JalaramCNC.exe backup`.
+
+---
+
+## PACKAGED CLI COMMANDS
+
+```cmd
+"C:\Program Files\Jalaram CNC\JalaramCNC.exe" <command>
+```
+
+| Command | Purpose |
+|---|---|
+| `serve` | Starts Waitress and the background backup worker |
+| `init` | Creates configuration/folders and runs migrations |
+| `migrate` | Runs Django migrations |
+| `check` | Runs Django system checks |
+| `doctor` | Checks paths, SQLite integrity, Django, and backup freshness |
+| `backup` | Creates a verified backup immediately |
+| `restore` | Interactive restore from local backups |
+| `set-db-password` | Sets or changes the database-delete password |
+| `delete-db` | Password-protected delete with emergency backup |
+| `wait-ready` | Waits up to 30 seconds for local HTTP 200 |
+| `version` | Prints the application version |
+
+Service diagnostics:
+
+```cmd
+sc query JalaramCNCService
+sc start JalaramCNCService
+sc stop JalaramCNCService
+```
+
+Logs:
+
+```text
+C:\ProgramData\JalaramCNC\logs
+```
+
+---
+
+## OFFLINE FRONTEND ASSETS
+
+| Library | Bundled version/location |
+|---|---|
+| Bootstrap | 5.3.2 in `static/vendor/bootstrap` |
+| Bootstrap Icons | 1.11.3 in `static/vendor/bootstrap-icons` |
+| Inter | Local WOFF2 files in `static/vendor/inter` |
+| SweetAlert2 | 11.14.5 in `static/vendor/sweetalert2` |
+| html2pdf.js | 0.10.1 in `static/vendor/html2pdf` |
+| Tom Select | 2.3.1 in `static/vendor/tom-select` |
+
+Templates that use `{% static %}` must include `{% load static %}` themselves; Django does not inherit loaded template-tag libraries from `base.html`.
 
 ---
 
 ## DATABASE SCHEMA
 
 ### Customer
+
 | Field | Type | Notes |
 |---|---|---|
-| id | AutoField | PK |
-| name | CharField(200) | |
-| phone_number | CharField(15) | **unique** |
-| city | CharField(100) | |
-| created_at | DateTimeField | auto |
-| updated_at | DateTimeField | auto |
-
-`__str__` → `"Name (phone_number)"`  
-Ordered by `-created_at`
+| `id` | AutoField | Primary key |
+| `name` | CharField(200) | Required |
+| `phone_number` | CharField(15) | Unique customer identity |
+| `city` | CharField(100) | Required |
+| `created_at` | DateTimeField | Automatic |
+| `updated_at` | DateTimeField | Automatic |
 
 ### Bill
+
 | Field | Type | Notes |
 |---|---|---|
-| id | AutoField | PK |
-| bill_number | PositiveIntegerField | unique, auto-set on create via Max()+1 |
-| customer | FK(Customer) | nullable, SET_NULL on delete |
-| customer_name | CharField(200) | denormalised copy |
-| customer_phone | CharField(15) | denormalised copy |
-| customer_city | CharField(100) | denormalised copy |
-| discount | IntegerField | default 0 |
-| extra_charges | IntegerField | default 0 |
-| paid_amount | IntegerField | default 0 |
-| notes | TextField | blank=True |
-| created_at | DateTimeField | auto |
-| updated_at | DateTimeField | auto |
+| `id` | AutoField | Primary key |
+| `bill_number` | PositiveIntegerField | Unique, assigned with `Max()+1` |
+| `customer` | FK(Customer) | Nullable, `SET_NULL` |
+| `customer_name` | CharField(200) | Denormalized copy |
+| `customer_phone` | CharField(15) | Denormalized copy |
+| `customer_city` | CharField(100) | Denormalized copy |
+| `discount` | IntegerField | Whole rupees |
+| `extra_charges` | IntegerField | Whole rupees |
+| `paid_amount` | IntegerField | Whole rupees |
+| `notes` | TextField | Optional |
+| `created_at` | DateTimeField | Automatic |
+| `updated_at` | DateTimeField | Automatic |
 
-**Calculated properties** (Python only, not DB columns):
+Calculated properties:
 
 | Property | Formula |
 |---|---|
@@ -167,309 +476,165 @@ Ordered by `-created_at`
 | `total` | `subtotal - discount + extra_charges` |
 | `due_amount` | `max(0, total - paid_amount)` |
 | `is_paid` | `due_amount == 0` |
-| `payment_status` | `'Unpaid'` / `'Partial'` / `'Paid'` |
-
-`__str__` → `"Bill #N - Customer Name"`
+| `payment_status` | `Unpaid`, `Partial`, or `Paid` |
 
 ### BillItem
+
 | Field | Type | Notes |
 |---|---|---|
-| id | AutoField | PK |
-| bill | FK(Bill) | CASCADE, related_name='items' |
-| description | CharField(200) | blank=True (optional) |
-| size | CharField(100) | required |
-| quantity | PositiveIntegerField | default 1 |
-| amount | IntegerField | required, whole rupees |
+| `id` | AutoField | Primary key |
+| `bill` | FK(Bill) | Cascade, related name `items` |
+| `description` | CharField(200) | Optional |
+| `size` | CharField(100) | Required |
+| `quantity` | PositiveIntegerField | Default 1 |
+| `amount` | IntegerField | Whole rupees |
 
-> **All money values are IntegerField** — whole rupees, no decimals.
+All money values are integer rupees.
 
 ---
 
 ## URL ROUTES
 
-All routes are in `core/urls.py`, mounted at `/` via `jalaram_cnc/urls.py`.
+### Dashboard and system
 
-### Dashboard
-| URL | Name | View |
+| URL | Name | Purpose |
 |---|---|---|
-| `/` | `dashboard` | Dashboard with stats, recent bills/customers |
+| `/` | `dashboard` | Statistics and recent data |
+| `/system-health/` | `system_health` | Database, backup, disk, and runtime status |
+| `/system-health/backup-now/` | `run_backup_now` | POST-only manual backup |
 
 ### Customers
-| URL | Name | View | Notes |
-|---|---|---|---|
-| `/customers/` | `customer_list` | List with search | |
-| `/customers/add/` | `customer_create` | Create form | |
-| `/customers/phone-lookup/` | `customer_phone_lookup` | AJAX JSON | Returns customer by phone |
-| `/customers/live-search/` | `live_search_customers` | AJAX JSON | Search by name/phone |
-| `/customers/<pk>/` | `customer_detail` | Detail + bill history | |
-| `/customers/<pk>/edit/` | `customer_update` | Edit form | |
-| `/customers/<pk>/delete/` | `customer_delete` | POST only | |
-| `/customers/<pk>/api/` | `customer_api` | AJAX JSON | Returns name/phone/city |
+
+| URL | Name | Purpose |
+|---|---|---|
+| `/customers/` | `customer_list` | List/search customers |
+| `/customers/add/` | `customer_create` | Add customer |
+| `/customers/phone-lookup/` | `customer_phone_lookup` | AJAX phone lookup |
+| `/customers/live-search/` | `live_search_customers` | AJAX name/phone search |
+| `/customers/<pk>/` | `customer_detail` | Customer and bill history |
+| `/customers/<pk>/edit/` | `customer_update` | Edit customer |
+| `/customers/<pk>/delete/` | `customer_delete` | POST-only delete |
+| `/customers/<pk>/api/` | `customer_api` | Customer JSON |
 
 ### Bills
-| URL | Name | View | Notes |
-|---|---|---|---|
-| `/bills/` | `bill_list` | List with search | |
-| `/bills/create/` | `bill_create` | Create form | |
-| `/bills/unpaid/` | `unpaid_bills` | Unpaid list | Sorted by due amount desc |
-| `/bills/monthly-revenue/` | `monthly_revenue` | Revenue by month | |
-| `/bills/live-search/` | `live_search_bills` | AJAX JSON | Search by name/phone/number |
-| `/bills/<pk>/` | `bill_detail` | Inline invoice | PDF/Print/Share buttons |
-| `/bills/<pk>/edit/` | `bill_edit` | Edit form | |
-| `/bills/<pk>/delete/` | `bill_delete` | POST only | |
-| `/bills/<pk>/pdf/` | `bill_pdf` | Playwright PDF | Server-side fallback (not used by UI buttons) |
 
-> `bill_print` URL **does not exist** — it was removed. Do not reference `{% url 'bill_print' %}` anywhere.
-
----
-
-## VIEWS REFERENCE (`core/views.py`)
-
-### Helper functions
-- `_image_b64(rel_static_path)` — reads static file, returns `data:image/...;base64,...` URI (for Playwright rendering)
-- `_n2w(n)` / `_amount_words(amount)` — converts integer amount to words ("Five Hundred Rupees Only"), Indian number system
-- `_customers_dict()` — returns `{str(id): {name, phone, city}}` dict for the bill form JSON context
-
-### View logic highlights
-
-**`bill_create` / `bill_edit`** — Smart customer management:
-1. Phone number is the unique customer identifier
-2. If a customer is selected from dropdown + phone unchanged → update name/city if different
-3. If phone is changed → find/create customer with new phone
-4. If manual entry (no dropdown) → look up by phone, auto-create if new
-
-**`bill_pdf`** — Playwright server-side PDF:
-- Renders `bills/print.html` with `is_preview=True`, `logo_b64`, `qr_b64`
-- Opens Chromium headless, sets HTML content, exports PDF (A4, no margins)
-- Returns `application/pdf` attachment response
-- If Playwright fails → returns HTTP 500 with error text
-- **Not used by any UI button** — all PDF downloads use client-side html2pdf.js instead (much faster)
-
-**`dashboard`** — uses `prefetch_related('items')` + Python list comprehension (F() expressions can't be used on @property fields)
-
-**`unpaid_bills`** — sorted in Python: `(-due_amount, created_at)`
-
----
-
-## FORMS REFERENCE (`core/forms.py`)
-
-### `CustomerForm`
-- Fields: `name`, `phone_number`, `city`
-
-### `BillForm`
-- Fields: `customer`, `customer_name`, `customer_phone`, `customer_city`, `discount`, `extra_charges`, `paid_amount`, `notes`
-- `customer`: required=False, Tom Select searchable dropdown (name + phone)
-- `customer_city`: required=False
-- `discount`, `extra_charges`, `paid_amount`: required=False, `clean_*` methods default to `0` if blank
-- New bill: initial values for discount/extra_charges/paid_amount are `''` (shows placeholder, not 0)
-- `clean()`: validates customer_name and customer_phone are non-empty; strips whitespace
-
-### `BillItemForm` + `BillItemFormSet`
-- Fields: `description` (optional), `size`, `quantity`, `amount`
-- FormSet: `min_num=1`, `extra=1`, `can_delete=True`
-
----
-
-## TEMPLATES REFERENCE
-
-### `base.html`
-- Sidebar (`<aside class="sidebar">`) + topbar (`<header class="topbar">`) + `<main class="page-content">`
-- Blocks: `title`, `page_heading`, `content`, `extra_css`, `extra_js`
-- Context processor provides `today` (date) and `business_name` to every template
-- **Sidebar brand**: `.brand-icon` renders `<img src="{% static 'images/logo.jpeg' %}">` with `.brand-logo-img` class (white background, `object-fit: contain`). No longer uses the Bootstrap `bi-tools` icon.
-
-### `bills/detail.html`
-- Renders the full invoice inline (no iframe) using CSS matching `print.html` design
-- Invoice element: `id="inv-page-content"` on `.inv-page` div
-- Action buttons: Back, Edit, Download PDF, Print, Share, Delete
-- **Print button**: `onclick="window.print()"` — prints the current page directly
-- **Print CSS**: `@page { size: A4; margin: 0; }` suppresses browser date/URL/page-number headers. `* { print-color-adjust: exact }` forces background colors (black table header, TOTAL row, badges). Action bar hidden via `.d-flex.align-items-center.gap-2.mb-3 { display: none }`.
-- **`downloadInvoicePDF()`**: uses html2pdf.js with `onclone` callback to hide sidebar/topbar in the render context, then captures `#inv-page-content` directly (no manual cloning needed)
-- **`shareBill()`**: same approach, generates PDF blob, uses Web Share API; falls back to download
-- `pdfOpts()`: `margin:0, scale:2, useCORS:true, onclone:hides sidebar/topbar, pagebreak:{mode:'avoid-all'}, jsPDF:{format:'a4'}`
-- `BILL_NUM` JS variable set from `{{ bill.bill_number }}`
-- Amount in words displayed via `{{ amount_words }}` context variable
-- **Disclaimer** shown after amount-in-words: *"We will not be responsible for any material after leaving the office."* — bold, dark, left-border accent (`.inv-disclaimer`)
-- **No duplicate Bill#/Date** — the right-hand `inv-info-box` beside "Bill To" was removed; Invoice# and Date appear only in the header top-right
-
-### `bills/list.html`
-- PDF download button uses `quickPDF()`: fetches detail page HTML, extracts `#inv-page-content` + styles via DOMParser, renders in hidden container with html2pdf.js (fast, no Playwright)
-
-### `customers/detail.html`
-- Same `quickPDF()` approach as bills/list.html for PDF download buttons
-
-### `bills/print.html`
-- Standalone page with full invoice (no base.html extends)
-- Used exclusively by `bill_pdf` view (Playwright renders it server-side)
-- Also used directly via browser when opening `/bills/<pk>/pdf/` and the toolbar Print button
-- Has a toolbar (`.no-print`) hidden when `is_preview=True`
-- Uses base64 images from `logo_b64` / `qr_b64` context vars (needed because Playwright can't load static files via relative URL)
-- Shows Advance Paid only if `paid_amount > 0`; shows Due Payment only if `paid_amount > 0 AND due_amount > 0`
-- **`@page { size: A4; margin: 0; }`** suppresses browser print headers/footers (date, title, URL, page numbers)
-- **`* { print-color-adjust: exact }`** forces background colors when printing
-- **Disclaimer** shown after amount-in-words: bold, dark, left-border accent (`.disclaimer`)
-- **No duplicate Bill#/Date** — `invoice-info-box` beside "Bill To" removed; Invoice# and Date in header only
-
-### `bills/form.html`
-- Extends `base.html`, uses `{% block extra_css %}` for Tom Select CSS
-- **Tom Select**: initialised on `#id_customer`; dispatches native `change` event so existing autofill JS works
-- **Autofill**: selecting customer from dropdown fills name/phone/city; typing phone triggers `/customers/phone-lookup/` debounced AJAX
-- **"Paid in Full" toggle** (`#paid-full-check`): sets paid_amount = total, locks field; unchecking restores
-- `fmt(n)` JS function: `Math.round(n)` — integer display, no decimals
-- `updateSummary()`: live calculation of subtotal/total/due shown in right column
-- Customer data passed as `{{ customers_dict|json_script:"customer-data" }}` (XSS-safe)
-
-### `dashboard.html`
-- 4 stat cards: Total Customers, Total Bills, This Month Revenue (₹), Pending Due (₹)
-- Recent Bills table (last 6), Recent Customers list (last 5)
-- Quick action cards: Unpaid Bills, Monthly Revenue, View All Bills
-
-### `bills/unpaid.html`
-- Table: Bill#, Customer, Phone, Total, Paid Amount (badge: ₹X if paid, "Not Paid" if 0), Due Amount, Date, Actions
-- Summary card (red) showing total due
-
-### `bills/monthly_revenue.html`
-- Accordion layout — one item per month, expanded by default for the first month
-- Each accordion shows a table of bills for that month: Bill#, Customer, Total, Status badge, Date, View link
-- Summary card (green) showing total revenue across all months
-- Context: `monthly_data` (list of `(month_key, {display, total, bills})`), `total_revenue`
-
----
-
-## CONTEXT PROCESSOR (`core/context_processors.py`)
-
-```python
-def site_info(request):
-    return {'today': timezone.now().date(), 'business_name': 'Jalaram CNC Art & Craft'}
-```
-Available in every template as `{{ today }}` and `{{ business_name }}`.
-
----
-
-## ADMIN (`core/admin.py`)
-
-- `CustomerAdmin`: list_display name/phone/city/created_at; search by name/phone/city
-- `BillAdmin`: list_display bill_number/customer_name/phone/city/created_at; readonly bill_number; inline BillItemInline
-- `BillItemInline`: TabularInline, fields description/size/amount
-
----
-
-## SETTINGS HIGHLIGHTS (`jalaram_cnc/settings.py`)
-
-| Setting | Value | Notes |
+| URL | Name | Purpose |
 |---|---|---|
-| `DEBUG` | `True` (env: `DEBUG`) | Set to False in production |
-| `SECRET_KEY` | placeholder | **Change before production** |
-| `ALLOWED_HOSTS` | `['*']` | **Restrict in production** |
-| `DATABASE` | SQLite `db.sqlite3` | |
-| `STATIC_URL` | `/static/` | |
-| `STATICFILES_DIRS` | `[BASE_DIR / 'static']` | |
-| Context processors | `core.context_processors.site_info` | adds today + business_name |
+| `/bills/` | `bill_list` | All bills, live search, date filter |
+| `/bills/create/` | `bill_create` | Create bill |
+| `/bills/unpaid/` | `unpaid_bills` | Outstanding bills and total due |
+| `/bills/unpaid/live-search/` | `live_search_unpaid_bills` | Unpaid-only AJAX search |
+| `/bills/monthly-revenue/` | `monthly_revenue` | Revenue grouped by month |
+| `/bills/live-search/` | `live_search_bills` | AJAX name/phone/number search |
+| `/bills/<pk>/` | `bill_detail` | Invoice, PDF, print, and share |
+| `/bills/<pk>/edit/` | `bill_edit` | Edit bill |
+| `/bills/<pk>/delete/` | `bill_delete` | POST-only delete |
+
+There is no `bill_print` or server-side `bill_pdf` route. PDF generation is browser-side through bundled html2pdf.js.
 
 ---
 
-## KNOWN GOTCHAS / IMPORTANT NOTES
+## IMPORTANT UI BEHAVIOR
 
-1. **`bill_print` URL is gone** — removed entirely. Never use `{% url 'bill_print' ... %}` in any template — it will crash the page with `NoReverseMatch` at render time (Django resolves `{% url %}` tags in template rendering, not just when called from JS).
+### Bill creation
 
-2. **Money is IntegerField** — all amounts (discount, extra_charges, paid_amount, BillItem.amount) are whole rupees. No decimal points anywhere in the system.
+- Phone number is the customer identity.
+- Selecting a customer fills name, phone, and city.
+- Typing a known phone performs a debounced lookup.
+- A changed/new phone can link or create the appropriate customer.
+- Paid in Full sets and locks `paid_amount` to the calculated total.
 
-3. **@property totals can't use F() expressions** — subtotal/total/due_amount are Python properties, not DB columns. All views that filter/sort by these must use `prefetch_related('items')` and Python list comprehensions.
+### Unpaid Bills
 
-4. **bill_number auto-increment** uses `Max('bill_number') + 1` — not thread-safe under very high concurrency (not an issue for local/single-user use).
+- Shows only bills with `due_amount > 0`.
+- Sorted by due amount descending, then date.
+- Live search supports customer name, phone, and bill number.
+- Search results never include fully paid bills.
+- Calendar filter updates visible rows, count, and total due.
+- Clear resets both search and date.
+- Mobile layout keeps overflow inside the table.
 
-5. **Playwright is optional** — `playwright install chromium`. The `/bills/<pk>/pdf/` endpoint still exists but is not used by any UI button. All PDF downloads use client-side html2pdf.js.
+### PDF and print
 
-6. **WeasyPrint is in requirements.txt but NOT used** — leftover from an earlier version.
-
-7. **ReportLab (`bill_generator.py`) is NOT routed** — exists in the codebase but no URL/view calls it.
-
-8. **Customer phone_number is unique** — attempting to create two customers with the same phone raises `IntegrityError`. The bill create/edit logic handles this by upsert logic (find existing → update, or create new).
-
-9. **Tom Select replaces the native `<select>`** — when TomSelect is initialized on `#id_customer`, the native select is hidden. The existing `change` event listener is preserved because TomSelect's `onChange` callback dispatches a native `change` event.
-
-10. **PDF from detail.html uses `onclone`** — `downloadInvoicePDF()` uses html2pdf.js `onclone` callback to hide sidebar/topbar/wrapper in the cloned document before html2canvas renders. This avoids the left-cropping caused by the 240px sidebar reducing content width below the 794px invoice width.
-
-11. **PDF from list/customer pages uses fetch+parse** — `quickPDF()` fetches the detail page HTML, extracts `#inv-page-content` + `<style>` blocks via DOMParser, renders in an isolated hidden container. Fast (~0.5s) because no Playwright/server-side rendering.
-
-12. **Print background colors** — browsers strip background colors/images by default. Both invoice templates use `* { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }` in `@media print` to force them. Without this, the dark table header, TOTAL row, "Bill To" badge, and payment badges all go white.
-
-13. **Browser print headers/footers** — suppressed via `@page { size: A4; margin: 0; }`. This removes the margin area where Chrome/Edge/Firefox inject the page title, date, URL, and page number. Both `detail.html` and `print.html` include this rule.
-
-14. **`bill_edit` does NOT have upsert logic** — only `bill_create` has the full customer find-or-create logic. `bill_edit` calls `form.save()` / `formset.save()` directly and updates only bill fields, not the linked customer record.
+- `bills/detail.html` renders the invoice inline.
+- Detail PDF/share captures `#inv-page-content` with bundled html2pdf.js.
+- Bill/customer list PDF actions fetch and render the detail invoice.
+- Printing uses A4 with zero page margin and exact color adjustment.
+- No Chromium or Playwright installation is needed.
 
 ---
 
-## INVOICE LAYOUT (print.html / detail.html)
+## GENERATED CONFIGURATION
 
+Installed `configuration.env` normally contains:
+
+```text
+DEBUG=False
+DJANGO_SECRET_KEY=<random secret>
+ALLOWED_HOSTS=127.0.0.1,localhost
+SERVER_HOST=127.0.0.1
+SERVER_PORT=8000
+ONEDRIVE_BACKUP_DIR=<optional detected path>
 ```
-+-------------------------------------------------------------+
-| [LOGO 90px]  Jalaram CNC Art & Craft              INVOICE   |
-|              Address, Phone                Invoice No: NNN  |
-|                                            Date: DD/MM/YYYY |
-+-------------------------------------------------------------+
-| BILL TO                                                     |
-| Customer Name                                               |
-| Phone: XXXXXXXXXX                                           |
-| City                                                        |
-+-------------------------------------------------------------+
-| #  | Description |    Size       |  Qty  |  Amount (Rs)     |
-| 1  | [text]      | [12x18 inch]  |   2   |       500        |
-+-------------------------------------------------------------+
-|                         Sub Total    :          Rs NNN      |
-|                         Discount     :         -Rs NNN      |
-|                         Extra Charges:         +Rs NNN      |
-|  (if paid_amount > 0)  Advance Paid  :          Rs NNN      |
-|  (if due > 0)          Due Payment   :          Rs NNN      |
-|                         TOTAL AMOUNT :          Rs NNN      |
-+-------------------------------------------------------------+
-|  Amount in Words: Five Hundred Rupees Only                  |
-+-------------------------------------------------------------+
-|  ⚠ We will not be responsible for any material after        |
-|    leaving the office.  (bold italic)                       |
-+-------------------------+-----------------------------------+
-| BANK DETAILS            |      [QR CODE 120px]              |
-| Bank : SBI, Kapadwanj   |  Scan to Pay                      |
-| A/C  : 36474515254      |                                    |
-| IFSC : SBIN0000287      |                                    |
-+-------------------------+-----------------------------------+
-```
+
+Settings highlights:
+
+- WhiteNoise follows Django SecurityMiddleware.
+- Static files resolve from packaged `staticfiles` when frozen.
+- SQLite, media, and logs resolve through `runtime_paths.py`.
+- Rotating Django application and error logs are enabled.
+- Allowed hosts default to localhost only.
 
 ---
 
-## COMMON TASKS
+## TESTING AND RELEASE VALIDATION
 
-### Run development server
-```bash
-.venv\Scripts\python.exe manage.py runserver
-```
+Run:
 
-### Apply migrations after model changes
-```bash
-.venv\Scripts\python.exe manage.py makemigrations
-.venv\Scripts\python.exe manage.py migrate
+```powershell
+.\.venv\Scripts\python.exe manage.py test core --verbosity 2
+.\.venv\Scripts\python.exe manage.py check
 ```
 
-### Check for errors
-```bash
-.venv\Scripts\python.exe manage.py check
-```
+Focused tests cover:
 
-### Access Django admin
-```
-http://127.0.0.1:8000/admin/
-```
-Create superuser first: `.venv\Scripts\python.exe manage.py createsuperuser`
+- Unpaid Bills search/date controls.
+- Search by customer name, phone, and bill number.
+- Exclusion of fully paid bills from unpaid search.
+- Backup worker launch before Waitress.
+- Backup only when no recent valid copy exists.
+
+Release 1.0.1 frozen validation includes:
+
+- Fresh migration and configuration creation.
+- SQLite integrity and verified backup.
+- Dashboard and packaged static assets returning HTTP 200.
+- Main application screens returning HTTP 200.
+- Waitress responding before overdue backup starts.
+- Deferred backup and optional OneDrive mirror afterward.
+- Successful `wait-ready` check.
+- Successful Inno Setup compilation.
+
+---
+
+## KNOWN CONSTRAINTS
+
+1. `bill_number` uses `Max('bill_number') + 1`; acceptable for local single-user use but not high-concurrency safe.
+2. Bill totals are Python properties, so filtering/sorting requires prefetched items and Python processing.
+3. `bill_edit` does not use the full customer-upsert behavior of `bill_create`.
+4. The unsigned installer can trigger SmartScreen; use **More info > Run anyway** or sign future releases.
+5. Local backups do not protect against disk loss or theft; OneDrive or USB copies provide off-device protection.
+6. Automatic backup timing is freshness-based, not fixed-clock: check hourly and back up when the newest valid copy is at least 24 hours old.
 
 ---
 
 ## VERSION HISTORY
 
-| Date | Change |
+| Version/Date | Change |
 |---|---|
-| 2026-08-30 | Sidebar brand icon replaced with actual logo image (logo.jpeg). Invoice duplicate Bill#/Date removed (kept only in header). Disclaimer line added to invoice. Print fixed: @page margin:0 suppresses browser headers/footers; print-color-adjust:exact restores background colors. PROJECT_MEMORY updated. |
-| 2026-08-30 | PDF download switched to client-side html2pdf.js everywhere (detail, list, customer detail). Playwright endpoint kept as fallback but no UI uses it. Fixed left-cropping via onclone (detail) and fetch+parse (list/customer). |
-| 2026-08-30 | Full PROJECT_MEMORY rewrite — accurate to actual codebase |
-| 2026-08-30 | Fixed: bill_print removal, extra_charges required error, encoding corruption (₹/—/→), Tom Select searchable dropdown, clone-based PDF, @media print CSS |
-| 2026-08-29 | html2pdf.js client-side PDF, inline invoice rendering on detail page, IntegerField migration, Paid-in-Full toggle |
-| 2026-08-29 | Initial: customers, bills, payment tracking, live search, Playwright PDF, professional invoice design |
+| 1.0.1 - 2026-09-05 | Removed failing Task Scheduler creation and delayed-auto startup. Waitress starts immediately; backup checks run in the background after 10 seconds and hourly thereafter. Added installer readiness verification. |
+| 1.0.0 - 2026-09-05 | Added PyInstaller/WinSW/Inno single-EXE deployment, `ProgramData` persistence, upgrade-safe database handling, offline assets, System Health backups, and packaged CLI diagnostics. |
+| 2026-09-05 | Added Unpaid Bills live search, date filter, dynamic visible count/total, mobile validation, and regression tests. |
+| 2026-09-05 | Fixed missing `{% load static %}` in Bills List and Customer Detail and compiled all templates. |
+| 2026-08-30 | Switched UI PDF downloads to html2pdf.js, fixed invoice printing/colors, added disclaimer, and removed duplicate metadata. |
+| 2026-08-29 | Initial customers, bills, payment tracking, invoice, and PDF workflows. |

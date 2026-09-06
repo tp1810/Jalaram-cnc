@@ -1,9 +1,22 @@
 import os
 from pathlib import Path
 
+from jalaram_cnc.runtime_paths import (
+    CONFIG_FILE,
+    DB_PATH,
+    LOG_DIR,
+    MEDIA_DIR,
+    STATIC_ROOT,
+    STATIC_SOURCE_DIR,
+    TEMPLATE_DIR,
+    ensure_data_dirs,
+)
+
+ensure_data_dirs()
+
 try:
     from dotenv import load_dotenv
-    load_dotenv(Path(__file__).resolve().parent.parent / '.env')
+    load_dotenv(CONFIG_FILE)
 except ImportError:
     pass
 
@@ -44,7 +57,7 @@ ROOT_URLCONF = 'jalaram_cnc.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': [TEMPLATE_DIR],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -63,7 +76,7 @@ WSGI_APPLICATION = 'jalaram_cnc.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': DB_PATH,
     }
 }
 
@@ -80,20 +93,15 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [STATIC_SOURCE_DIR] if STATIC_SOURCE_DIR.exists() else []
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = MEDIA_DIR
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 MESSAGE_STORAGE = 'django.contrib.messages.storage.fallback.FallbackStorage'
-
-# ── Logging ──────────────────────────────────────────────────────
-_LOG_DIR = BASE_DIR / 'logs'
-_LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 LOGGING = {
     'version': 1,
@@ -108,7 +116,7 @@ LOGGING = {
         'app_file': {
             'level': 'INFO',
             'class': 'logging.handlers.RotatingFileHandler',
-            'filename': str(_LOG_DIR / 'app.log'),
+            'filename': str(LOG_DIR / 'app.log'),
             'maxBytes': 10 * 1024 * 1024,
             'backupCount': 3,
             'formatter': 'verbose',
@@ -117,7 +125,7 @@ LOGGING = {
         'error_file': {
             'level': 'ERROR',
             'class': 'logging.handlers.RotatingFileHandler',
-            'filename': str(_LOG_DIR / 'error.log'),
+            'filename': str(LOG_DIR / 'error.log'),
             'maxBytes': 5 * 1024 * 1024,
             'backupCount': 3,
             'formatter': 'verbose',

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Bills — Jalaram CNC{% endblock %}
 {% block page_heading %}Bills{% endblock %}
@@ -119,7 +120,7 @@
     </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin="anonymous"></script>
+<script src="{% static 'vendor/html2pdf/html2pdf.bundle.min.js' %}"></script>
 <script>
 // Client-side PDF: fetch detail page HTML, extract invoice, render with html2pdf.js
 async function quickPDF(btn, pk, billNum) {

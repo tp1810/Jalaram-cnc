@@ -12,13 +12,13 @@ import shutil
 import sqlite3
 import sys
 from datetime import datetime
-from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DB_PATH      = PROJECT_ROOT / 'db.sqlite3'
-DAILY_DIR    = PROJECT_ROOT / 'backups' / 'daily'
-MONTHLY_DIR  = PROJECT_ROOT / 'backups' / 'monthly'
-BACKUP_DIR   = PROJECT_ROOT / 'backups'
+from jalaram_cnc.runtime_paths import (
+    BACKUP_DIR,
+    DAILY_BACKUP_DIR as DAILY_DIR,
+    DB_PATH,
+    MONTHLY_BACKUP_DIR as MONTHLY_DIR,
+)
 
 
 def list_backups() -> list:

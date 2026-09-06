@@ -16,22 +16,28 @@ import os
 import shutil
 import sqlite3
 import sys
+from contextlib import closing
 from datetime import datetime, timedelta
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+from jalaram_cnc.runtime_paths import (
+    CONFIG_FILE,
+    DAILY_BACKUP_DIR,
+    DB_PATH,
+    LOG_DIR,
+    MONTHLY_BACKUP_DIR,
+    ensure_data_dirs,
+)
 
-# Load .env so ONEDRIVE_BACKUP_DIR is available (dotenv optional)
 try:
     from dotenv import load_dotenv
-    load_dotenv(PROJECT_ROOT / '.env')
+    load_dotenv(CONFIG_FILE)
 except ImportError:
     pass
 
-DB_PATH        = PROJECT_ROOT / 'db.sqlite3'
-DAILY_DIR      = PROJECT_ROOT / 'backups' / 'daily'
-MONTHLY_DIR    = PROJECT_ROOT / 'backups' / 'monthly'
-LOG_PATH       = PROJECT_ROOT / 'logs' / 'backup.log'
+DAILY_DIR = DAILY_BACKUP_DIR
+MONTHLY_DIR = MONTHLY_BACKUP_DIR
+LOG_PATH = LOG_DIR / 'backup.log'
 
 KEEP_DAILY   = 30
 KEEP_MONTHLY = 12
@@ -51,6 +57,7 @@ def log(msg: str) -> None:
 
 
 def run_backup() -> None:
+    ensure_data_dirs()
     log('=' * 55)
     log('Backup started')
 
@@ -64,31 +71,29 @@ def run_backup() -> None:
     now = datetime.now()
     stamp = now.strftime('%Y-%m-%d_%H%M%S')
     daily_path = DAILY_DIR / f'db_{stamp}.sqlite3'
+    temporary_path = DAILY_DIR / f'.db_{stamp}.tmp'
 
-    # Use SQLite's backup API — safe while Django is running
     try:
-        src = sqlite3.connect(str(DB_PATH))
-        dst = sqlite3.connect(str(daily_path))
-        src.backup(dst)
-        dst.close()
-        src.close()
+        with closing(sqlite3.connect(str(DB_PATH))) as source:
+            with closing(sqlite3.connect(str(temporary_path))) as destination:
+                source.backup(destination)
     except Exception as exc:
+        temporary_path.unlink(missing_ok=True)
         log(f'ERROR: Backup creation failed: {exc}')
-        sys.exit(1)
+        raise RuntimeError('Backup creation failed') from exc
 
-    # Verify the backup can be opened and passes integrity check
     try:
-        conn = sqlite3.connect(str(daily_path))
-        result = conn.execute('PRAGMA integrity_check').fetchone()
-        conn.close()
+        with closing(sqlite3.connect(str(temporary_path))) as connection:
+            result = connection.execute('PRAGMA integrity_check').fetchone()
         if result[0] != 'ok':
             raise ValueError(f'integrity_check returned: {result[0]}')
+        temporary_path.replace(daily_path)
         size_kb = daily_path.stat().st_size // 1024
         log(f'Backup created and verified: {daily_path.name}  ({size_kb} KB)')
     except Exception as exc:
+        temporary_path.unlink(missing_ok=True)
         log(f'ERROR: Backup verification failed: {exc}')
-        daily_path.unlink(missing_ok=True)
-        sys.exit(1)
+        raise RuntimeError('Backup verification failed') from exc
 
     # Monthly backup on the 1st of every month
     if now.day == 1:
@@ -137,20 +142,26 @@ def run_backup() -> None:
     log('=' * 55)
 
 
-def _recent_backup_exists(hours: int = 20) -> bool:
-    """Return True if a backup file exists that is newer than `hours` hours."""
+def recent_valid_backup_exists(hours: int = 24) -> bool:
     if not DAILY_DIR.exists():
         return False
     cutoff = datetime.now() - timedelta(hours=hours)
-    return any(
-        datetime.fromtimestamp(f.stat().st_mtime) > cutoff
-        for f in DAILY_DIR.glob('db_*.sqlite3')
-    )
+    for backup_file in sorted(DAILY_DIR.glob('db_*.sqlite3'), reverse=True):
+        if datetime.fromtimestamp(backup_file.stat().st_mtime) <= cutoff:
+            continue
+        try:
+            with closing(sqlite3.connect(str(backup_file))) as connection:
+                result = connection.execute('PRAGMA quick_check').fetchone()
+            if result and result[0] == 'ok':
+                return True
+        except sqlite3.Error:
+            continue
+    return False
 
 
 if __name__ == '__main__':
     if '--if-needed' in sys.argv:
-        if _recent_backup_exists(hours=20):
-            print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  Recent backup found (<20 h). Skipping startup backup.")
+        if recent_valid_backup_exists(hours=24):
+            print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  Recent valid backup found (<24 h). Skipping startup backup.")
             sys.exit(0)
     run_backup()

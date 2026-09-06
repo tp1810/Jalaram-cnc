@@ -1,7 +1,10 @@
 {% extends 'base.html' %}
 
+{% block title %}Unpaid Bills — Jalaram CNC{% endblock %}
+{% block page_heading %}Unpaid Bills{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
+<div class="container-fluid px-0">
     <div class="row mb-4">
         <div class="col-md-8">
             <h2>Unpaid Bills</h2>
@@ -11,15 +14,48 @@
             <div class="card bg-danger text-white">
                 <div class="card-body">
                     <h6 class="card-title">Total Due</h6>
-                    <h3>₹ {{ total_due }}</h3>
+                    <h3 id="visibleTotalDue">₹ {{ total_due }}</h3>
                 </div>
             </div>
         </div>
     </div>
 
+    <div class="page-toolbar mb-4">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div class="flex-grow-1" style="max-width: 400px;">
+                <div class="input-group position-relative">
+                    <span class="input-group-text bg-white border-end-0">
+                        <i class="bi bi-search text-muted"></i>
+                    </span>
+                    <input type="text" id="unpaidLiveSearch" class="form-control border-start-0 ps-0"
+                           placeholder="Search by bill #, name, phone..." autocomplete="off">
+                    <div id="unpaidSearchResults"
+                         class="position-absolute top-100 start-0 w-100 bg-white border border-top-0 rounded-bottom"
+                         style="display: none; max-height: 300px; overflow-y: auto; z-index: 1000;"></div>
+                </div>
+            </div>
+
+            <input type="date" id="unpaidDateFilter" class="form-control" style="max-width: 160px;"
+                   title="Filter unpaid bills by date" aria-label="Filter unpaid bills by date">
+            <button type="button" id="clearUnpaidFilters" class="btn btn-outline-secondary">
+                <i class="bi bi-x-circle me-1"></i>Clear
+            </button>
+            <a href="{% url 'bill_list' %}" class="btn btn-outline-primary ms-auto">
+                <i class="bi bi-receipt me-1"></i>All Bills
+            </a>
+        </div>
+    </div>
+
     {% if bills %}
-    <div class="table-responsive">
-        <table class="table table-hover">
+    <div class="card card-custom">
+        <div class="card-header-custom">
+            <h6 class="card-title-custom">
+                <i class="bi bi-exclamation-circle me-2"></i>Outstanding Bills
+                <span class="badge bg-danger ms-2" id="visibleUnpaidCount">{{ bills|length }}</span>
+            </h6>
+        </div>
+        <div class="table-responsive">
+        <table class="table table-hover mb-0">
             <thead class="table-dark">
                 <tr>
                     <th>Bill #</th>
@@ -32,9 +68,9 @@
                     <th>Action</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="unpaidBillsTable">
                 {% for bill in bills %}
-                <tr>
+                <tr data-bill-date="{{ bill.created_at|date:'Y-m-d' }}" data-due-amount="{{ bill.due_amount }}">
                     <td><strong>#{{ bill.bill_number }}</strong></td>
                     <td>{{ bill.customer_name }}</td>
                     <td>{{ bill.customer_phone }}</td>
@@ -56,8 +92,12 @@
                     </td>
                 </tr>
                 {% endfor %}
+                <tr id="noFilteredUnpaidBills" style="display: none;">
+                    <td colspan="8" class="text-center text-muted py-4">No unpaid bills found for the selected date.</td>
+                </tr>
             </tbody>
         </table>
+        </div>
     </div>
     {% else %}
     <div class="alert alert-success">
@@ -66,4 +106,95 @@
     </div>
     {% endif %}
 </div>
+
+<script>
+(function() {
+    const liveSearch = document.getElementById('unpaidLiveSearch');
+    const searchResults = document.getElementById('unpaidSearchResults');
+    const dateFilter = document.getElementById('unpaidDateFilter');
+    const clearFilters = document.getElementById('clearUnpaidFilters');
+    const table = document.getElementById('unpaidBillsTable');
+    const visibleCount = document.getElementById('visibleUnpaidCount');
+    const visibleTotal = document.getElementById('visibleTotalDue');
+    const noResultsRow = document.getElementById('noFilteredUnpaidBills');
+    let activeRequest = null;
+
+    function formatRupees(value) {
+        return new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(value);
+    }
+
+    function applyDateFilter() {
+        if (!table) return;
+        const selectedDate = dateFilter.value;
+        let count = 0;
+        let totalDue = 0;
+
+        table.querySelectorAll('tr[data-bill-date]').forEach(row => {
+            const visible = !selectedDate || row.dataset.billDate === selectedDate;
+            row.style.display = visible ? '' : 'none';
+            if (visible) {
+                count += 1;
+                totalDue += Number(row.dataset.dueAmount || 0);
+            }
+        });
+
+        visibleCount.textContent = count;
+        visibleTotal.textContent = '₹ ' + formatRupees(totalDue);
+        noResultsRow.style.display = count === 0 ? '' : 'none';
+    }
+
+    if (liveSearch) {
+        liveSearch.addEventListener('input', async function() {
+            const query = this.value.trim();
+            if (activeRequest) activeRequest.abort();
+            if (!query) {
+                searchResults.style.display = 'none';
+                return;
+            }
+
+            activeRequest = new AbortController();
+            try {
+                const response = await fetch(`{% url 'live_search_unpaid_bills' %}?q=${encodeURIComponent(query)}`, {
+                    signal: activeRequest.signal,
+                });
+                if (!response.ok) throw new Error('Search request failed');
+                const data = await response.json();
+
+                if (!data.results.length) {
+                    searchResults.innerHTML = '<div class="p-3 text-muted">No unpaid bills found</div>';
+                } else {
+                    searchResults.innerHTML = '<div class="list-group">' + data.results.map(bill => `
+                        <a href="/bills/${bill.id}/" class="list-group-item list-group-item-action border-0 border-bottom">
+                            <div class="d-flex justify-content-between gap-3">
+                                <strong>Bill #${bill.bill_number}</strong>
+                                <span class="badge ${bill.status === 'Partial' ? 'bg-warning text-dark' : 'bg-danger'}">₹ ${formatRupees(bill.due_amount)} due</span>
+                            </div>
+                            <small class="text-muted">${bill.customer_name} &bull; ${bill.customer_phone}</small>
+                        </a>`).join('') + '</div>';
+                }
+                searchResults.style.display = 'block';
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    searchResults.innerHTML = '<div class="p-3 text-danger">Search is temporarily unavailable</div>';
+                    searchResults.style.display = 'block';
+                }
+            }
+        });
+    }
+
+    dateFilter?.addEventListener('change', applyDateFilter);
+    clearFilters?.addEventListener('click', function() {
+        liveSearch.value = '';
+        dateFilter.value = '';
+        searchResults.style.display = 'none';
+        applyDateFilter();
+        liveSearch.focus();
+    });
+    document.addEventListener('click', function(event) {
+        if (!event.target.closest('#unpaidLiveSearch, #unpaidSearchResults')) {
+            searchResults.style.display = 'none';
+        }
+    });
+})();
+</script>
 {% endblock %}

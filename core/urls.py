@@ -25,8 +25,8 @@ urlpatterns = [
     path('bills/unpaid/', views.unpaid_bills, name='unpaid_bills'),
     path('bills/monthly-revenue/', views.monthly_revenue, name='monthly_revenue'),
     path('bills/live-search/', views.live_search_bills, name='live_search_bills'),
+    path('bills/unpaid/live-search/', views.live_search_unpaid_bills, name='live_search_unpaid_bills'),
     path('bills/<int:pk>/', views.bill_detail, name='bill_detail'),
     path('bills/<int:pk>/edit/', views.bill_edit, name='bill_edit'),
     path('bills/<int:pk>/delete/', views.bill_delete, name='bill_delete'),
-    path('bills/<int:pk>/pdf/', views.bill_pdf, name='bill_pdf'),
 ]

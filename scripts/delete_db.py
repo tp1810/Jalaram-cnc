@@ -13,13 +13,10 @@ import hashlib
 import shutil
 import sys
 from datetime import datetime
-from pathlib import Path
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parent
-DB_PATH    = PROJECT_ROOT / 'db.sqlite3'
-HASH_FILE  = SCRIPT_DIR / '.db_password_hash'
-BACKUP_DIR = PROJECT_ROOT / 'backups'
+from jalaram_cnc.runtime_paths import BACKUP_DIR, DATA_DIR, DB_PATH
+
+HASH_FILE = DATA_DIR / '.db_password_hash'
 
 
 def main() -> None:

@@ -8,25 +8,22 @@ Usage:
 """
 import os
 import sys
-from pathlib import Path
 
-# Add project root to path
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
+from jalaram_cnc.runtime_paths import CONFIG_FILE, SOURCE_DIR
+
+sys.path.insert(0, str(SOURCE_DIR))
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'jalaram_cnc.settings')
 
-# Load .env
-env_file = PROJECT_ROOT / '.env'
-if env_file.exists():
+if CONFIG_FILE.exists():
     try:
         from dotenv import load_dotenv
-        load_dotenv(env_file)
+        load_dotenv(CONFIG_FILE)
     except ImportError:
         pass
 
-if __name__ == '__main__':
-    # Django setup must happen after env vars are loaded
+
+def run_server() -> None:
     import django
     django.setup()
 
@@ -49,3 +46,7 @@ if __name__ == '__main__':
         channel_timeout=60,
         cleanup_interval=30,
     )
+
+
+if __name__ == '__main__':
+    run_server()

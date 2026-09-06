@@ -1,39 +1,20 @@
-import base64
 import datetime
 import os
 import platform
 import shutil
-import subprocess
-import sys
-from io import BytesIO
 
 from django.conf import settings as _settings
 from django.contrib import messages
 from django.db import models as db_models
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.template.loader import render_to_string
 from django.utils import timezone
 
-from .bill_generator import generate_bill
 from .forms import BillForm, BillItemFormSet, CustomerForm
 from .models import Bill, BillItem, Customer
 
 
 # ─────────────────────── HELPERS ─────────────────────────────────
-
-def _image_b64(rel_static_path):
-    """Return a data-URI string for an image in the static folder (WeasyPrint-safe)."""
-    try:
-        full = os.path.join(_settings.BASE_DIR, 'static', rel_static_path)
-        with open(full, 'rb') as fh:
-            raw = base64.b64encode(fh.read()).decode('utf-8')
-        ext = rel_static_path.rsplit('.', 1)[-1].lower()
-        mime = 'jpeg' if ext in ('jpg', 'jpeg') else ext
-        return f'data:image/{mime};base64,{raw}'
-    except Exception:
-        return ''
-
 
 _ONES = [
     '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven',
@@ -172,8 +153,8 @@ def customer_update(request, pk):
 
 
 def customer_delete(request, pk):
+    customer = get_object_or_404(Customer, pk=pk)
     if request.method == 'POST':
-        customer = get_object_or_404(Customer, pk=pk)
         name = customer.name
         customer.delete()
         messages.success(request, f'Customer "{name}" deleted successfully!')
@@ -231,20 +212,17 @@ def bill_create(request):
         if form.is_valid() and formset.is_valid():
             bill = form.save(commit=False)
 
-            customer_fk = form.cleaned_data.get('customer')  # Customer instance or None
-            submitted_name  = form.cleaned_data['customer_name']
+            customer_fk = form.cleaned_data.get('customer')
+            submitted_name = form.cleaned_data['customer_name']
             submitted_phone = form.cleaned_data['customer_phone']
-            submitted_city  = form.cleaned_data['customer_city']
+            submitted_city = form.cleaned_data['customer_city']
 
             if customer_fk:
                 original_phone = customer_fk.phone_number
 
                 if submitted_phone != original_phone:
-                    # ── Phone was changed → treat as a new customer ──
                     try:
-                        # New phone already exists → link to that existing customer
                         target = Customer.objects.get(phone_number=submitted_phone)
-                        # Update name/city on that record if changed
                         updated = False
                         if submitted_name and submitted_name != target.name:
                             target.name = submitted_name
@@ -445,39 +423,6 @@ def monthly_revenue(request):
     })
 
 
-def bill_pdf(request, pk):
-    """Generate PDF bill using Playwright + Chromium"""
-    bill = get_object_or_404(Bill.objects.prefetch_related('items'), pk=pk)
-
-    try:
-        from playwright.sync_api import sync_playwright
-
-        html_string = render_to_string('bills/print.html', {
-            'bill': bill,
-            'amount_words': _amount_words(bill.total),
-            'is_preview': True,
-            'logo_b64': _image_b64('images/logo.jpeg'),
-            'qr_b64': _image_b64('images/qr_code.jpeg'),
-        }, request=request)
-
-        with sync_playwright() as p:
-            browser = p.chromium.launch()
-            page = browser.new_page()
-            page.set_content(html_string, wait_until='load')
-            pdf_bytes = page.pdf(
-                format='A4',
-                print_background=True,
-                margin={'top': '0', 'right': '0', 'bottom': '0', 'left': '0'},
-            )
-            browser.close()
-
-        response = HttpResponse(pdf_bytes, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="Bill-{bill.bill_number}.pdf"'
-        return response
-    except Exception as e:
-        return HttpResponse(f'Error generating PDF: {e}', status=500)
-
-
 def live_search_bills(request):
     """Live search for bills (AJAX)"""
     query = request.GET.get('q', '').strip()
@@ -504,6 +449,35 @@ def live_search_bills(request):
     return JsonResponse({'results': results})
 
 
+def live_search_unpaid_bills(request):
+    """Live search restricted to bills that still have an outstanding balance."""
+    query = request.GET.get('q', '').strip()
+    if not query:
+        return JsonResponse({'results': []})
+
+    matching_bills = Bill.objects.prefetch_related('items').filter(
+        db_models.Q(customer_name__icontains=query)
+        | db_models.Q(customer_phone__icontains=query)
+    )
+    if query.isdigit():
+        matching_bills = matching_bills | Bill.objects.prefetch_related('items').filter(
+            bill_number=int(query)
+        )
+
+    unpaid_matches = [bill for bill in matching_bills if bill.due_amount > 0]
+    unpaid_matches.sort(key=lambda bill: (-float(bill.due_amount), bill.created_at))
+    results = [{
+        'id': bill.id,
+        'bill_number': bill.bill_number,
+        'customer_name': bill.customer_name,
+        'customer_phone': bill.customer_phone,
+        'due_amount': float(bill.due_amount),
+        'status': bill.payment_status,
+    } for bill in unpaid_matches[:20]]
+
+    return JsonResponse({'results': results})
+
+
 def live_search_customers(request):
     """Live search for customers (AJAX)"""
     query = request.GET.get('q', '').strip()
@@ -527,6 +501,8 @@ def live_search_customers(request):
 # ────────────────────────── SYSTEM HEALTH ───────────────────────────
 
 def system_health(request):
+    from jalaram_cnc.runtime_paths import DAILY_BACKUP_DIR, DATA_DIR, DB_PATH, LOG_DIR, MONTHLY_BACKUP_DIR
+
     # ─ Database
     db_ok = False
     db_size_kb = 0
@@ -535,15 +511,14 @@ def system_health(request):
         with connection.cursor() as cursor:
             cursor.execute('SELECT 1')
         db_ok = True
-        db_path = _settings.BASE_DIR / 'db.sqlite3'
-        if db_path.exists():
-            db_size_kb = db_path.stat().st_size // 1024
+        if DB_PATH.exists():
+            db_size_kb = DB_PATH.stat().st_size // 1024
     except Exception:
         pass
 
     # ─ Backups
-    backup_daily_dir = _settings.BASE_DIR / 'backups' / 'daily'
-    backup_monthly_dir = _settings.BASE_DIR / 'backups' / 'monthly'
+    backup_daily_dir = DAILY_BACKUP_DIR
+    backup_monthly_dir = MONTHLY_BACKUP_DIR
     daily_backups = sorted(backup_daily_dir.glob('db_*.sqlite3'), reverse=True) if backup_daily_dir.exists() else []
     monthly_backups = sorted(backup_monthly_dir.glob('db_*.sqlite3'), reverse=True) if backup_monthly_dir.exists() else []
     last_backup = None
@@ -554,7 +529,7 @@ def system_health(request):
 
     # ─ Backup log last line
     last_backup_log = None
-    log_path = _settings.BASE_DIR / 'logs' / 'backup.log'
+    log_path = LOG_DIR / 'backup.log'
     if log_path.exists():
         try:
             lines = [l for l in log_path.read_text(encoding='utf-8').splitlines() if l.strip()]
@@ -565,7 +540,7 @@ def system_health(request):
     # ─ Disk
     disk_free_gb = disk_total_gb = None
     try:
-        d = shutil.disk_usage(str(_settings.BASE_DIR))
+        d = shutil.disk_usage(str(DATA_DIR))
         disk_free_gb = round(d.free / (1024 ** 3), 1)
         disk_total_gb = round(d.total / (1024 ** 3), 1)
     except Exception:
@@ -596,18 +571,15 @@ def run_backup_now(request):
     """Trigger an on-demand backup from the System Health page (POST only)."""
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
-    script = _settings.BASE_DIR / 'scripts' / 'backup.py'
     try:
-        result = subprocess.run(
-            [sys.executable, str(script)],
-            capture_output=True,
-            text=True,
-            timeout=120,
-            cwd=str(_settings.BASE_DIR),
-        )
-        output = (result.stdout + result.stderr).strip()
-        return JsonResponse({'success': result.returncode == 0, 'output': output})
-    except subprocess.TimeoutExpired:
-        return JsonResponse({'success': False, 'output': 'Backup timed out after 120 seconds.'})
+        import contextlib
+        import io
+
+        from scripts.backup import run_backup
+
+        output_stream = io.StringIO()
+        with contextlib.redirect_stdout(output_stream):
+            run_backup()
+        return JsonResponse({'success': True, 'output': output_stream.getvalue().strip()})
     except Exception as exc:
         return JsonResponse({'success': False, 'output': str(exc)})
