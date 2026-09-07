@@ -19,6 +19,11 @@ urlpatterns = [
     path('system-health/', views.system_health, name='system_health'),
     path('system-health/backup-now/', views.run_backup_now, name='run_backup_now'),
 
+    # Expenses
+    path('expenses/', views.expense_list, name='expense_list'),
+    path('expenses/create/', views.expense_create, name='expense_create'),
+    path('expenses/<int:pk>/delete/', views.expense_delete, name='expense_delete'),
+
     # Bills
     path('bills/', views.bill_list, name='bill_list'),
     path('bills/create/', views.bill_create, name='bill_create'),

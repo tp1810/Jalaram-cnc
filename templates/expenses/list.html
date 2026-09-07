@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+
+{% block title %}Expenses — Jalaram CNC{% endblock %}
+{% block page_heading %}Expenses{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="row g-3 align-items-stretch mb-4">
+        <div class="col-md-8">
+            <div class="h-100 d-flex flex-column justify-content-center">
+                <h2 class="mb-1">Expense Register</h2>
+                <p class="text-muted mb-0">Review business spending by month or calendar date.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-danger text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="card-title">Filtered Total</h6>
+                            <h3 class="mb-0">₹ {{ total_expense }}</h3>
+                        </div>
+                        <i class="bi bi-wallet2 fs-3"></i>
+                    </div>
+                    <small>{{ expense_count }} expense{{ expense_count|pluralize }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="get" class="page-toolbar mb-4" id="expenseFilters">
+        <div class="row g-2 align-items-end">
+            <div class="col-xl-4 col-md-6">
+                <label for="expenseSearch" class="form-label small fw-500">Search</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0">
+                        <i class="bi bi-search text-muted"></i>
+                    </span>
+                    <input type="search" name="q" id="expenseSearch"
+                           class="form-control border-start-0 ps-0" value="{{ filters.q }}"
+                           placeholder="Title or notes...">
+                </div>
+            </div>
+            <div class="col-xl-2 col-md-3 col-6">
+                <label for="expenseAmount" class="form-label small fw-500">Exact Amount</label>
+                <input type="number" name="amount" id="expenseAmount" class="form-control"
+                       min="1" step="1" value="{{ filters.amount }}" placeholder="₹ Amount">
+            </div>
+            <div class="col-xl-2 col-md-3 col-6">
+                <label for="expenseMonth" class="form-label small fw-500">Month</label>
+                <select name="month" id="expenseMonth" class="form-select">
+                    <option value="">All months</option>
+                    {% for available_month in available_months %}
+                    <option value="{{ available_month|date:'Y-m' }}" {% if filters.month == available_month|date:'Y-m' %}selected{% endif %}>
+                        {{ available_month|date:'F Y' }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-xl-2 col-md-4 col-6">
+                <label for="expenseDate" class="form-label small fw-500">Calendar Date</label>
+                <input type="date" name="date" id="expenseDate" class="form-control" value="{{ filters.date }}">
+            </div>
+            <div class="col-xl-2 col-md-8 col-6">
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-grow-1" title="Apply filters">
+                        <i class="bi bi-funnel me-1"></i>Apply
+                    </button>
+                    <a href="{% url 'expense_list' %}" class="btn btn-outline-secondary" title="Clear filters" aria-label="Clear filters">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div class="d-flex justify-content-end mb-3">
+        <a href="{% url 'expense_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>Add Expense
+        </a>
+    </div>
+
+    {% if monthly_data %}
+    <div class="accordion" id="expenseMonths">
+        {% for month_key, month_info in monthly_data %}
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#expenseMonth{{ forloop.counter }}"
+                        aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}"
+                        aria-controls="expenseMonth{{ forloop.counter }}">
+                    <span>
+                        <strong>{{ month_info.display }}</strong>
+                        <small class="text-muted ms-2">{{ month_info.expenses|length }} record{{ month_info.expenses|length|pluralize }}</small>
+                    </span>
+                    <span class="badge bg-danger ms-auto me-3">₹ {{ month_info.total }}</span>
+                </button>
+            </h2>
+            <div id="expenseMonth{{ forloop.counter }}"
+                 class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
+                 data-bs-parent="#expenseMonths">
+                <div class="accordion-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 table-custom">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Notes</th>
+                                    <th>Date</th>
+                                    <th class="text-end">Amount</th>
+                                    <th class="text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for expense in month_info.expenses %}
+                                <tr>
+                                    <td class="fw-600">{{ expense.title }}</td>
+                                    <td class="text-muted">{{ expense.notes|default:"—"|truncatechars:80 }}</td>
+                                    <td class="text-muted text-nowrap">{{ expense.created_at|date:"d M Y, h:i A" }}</td>
+                                    <td class="text-end fw-600 text-danger text-nowrap">₹ {{ expense.amount }}</td>
+                                    <td class="text-center">
+                                        <form method="post" action="{% url 'expense_delete' expense.pk %}"
+                                              data-confirm-delete="expense '{{ expense.title }}'" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete expense" aria-label="Delete {{ expense.title }}">
+                                                <i class="bi bi-trash3"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card card-custom">
+        <div class="empty-state py-5">
+            <i class="bi bi-wallet2 fs-1 text-muted"></i>
+            <h5 class="mt-3">No expenses found</h5>
+            <p class="text-muted mb-3">
+                {% if filters.q or filters.amount or filters.month or filters.date %}
+                    Try clearing or changing the current filters.
+                {% else %}
+                    Add the first business expense to begin tracking spending.
+                {% endif %}
+            </p>
+            {% if filters.q or filters.amount or filters.month or filters.date %}
+            <a href="{% url 'expense_list' %}" class="btn btn-outline-secondary">Clear Filters</a>
+            {% else %}
+            <a href="{% url 'expense_create' %}" class="btn btn-primary">Add Expense</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

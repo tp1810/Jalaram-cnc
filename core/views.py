@@ -9,9 +9,10 @@ from django.db import models as db_models
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
-from .forms import BillForm, BillItemFormSet, CustomerForm
-from .models import Bill, BillItem, Customer
+from .forms import BillForm, BillItemFormSet, CustomerForm, ExpenseForm
+from .models import Bill, BillItem, Customer, Expense
 
 
 # ─────────────────────── HELPERS ─────────────────────────────────
@@ -421,6 +422,94 @@ def monthly_revenue(request):
         'monthly_data': monthly_list,
         'total_revenue': total_revenue,
     })
+
+
+# ────────────────────────── EXPENSES ────────────────────────────
+
+def expense_list(request):
+    expenses = Expense.objects.all()
+    available_months = list(
+        Expense.objects.dates('created_at', 'month', order='DESC')
+    )
+    query = request.GET.get('q', '').strip()
+    amount = request.GET.get('amount', '').strip()
+    month = request.GET.get('month', '').strip()
+    expense_date = request.GET.get('date', '').strip()
+
+    if query:
+        expenses = expenses.filter(
+            db_models.Q(title__icontains=query)
+            | db_models.Q(notes__icontains=query)
+        )
+    if amount.isdigit():
+        expenses = expenses.filter(amount=int(amount))
+    if month:
+        try:
+            month_date = datetime.datetime.strptime(month, '%Y-%m').date()
+            expenses = expenses.filter(
+                created_at__year=month_date.year,
+                created_at__month=month_date.month,
+            )
+        except ValueError:
+            month = ''
+    if expense_date:
+        try:
+            selected_date = datetime.date.fromisoformat(expense_date)
+            expenses = expenses.filter(created_at__date=selected_date)
+        except ValueError:
+            expense_date = ''
+
+    monthly_data = {}
+    for expense in expenses:
+        local_created_at = timezone.localtime(expense.created_at)
+        month_key = local_created_at.strftime('%Y-%m')
+        if month_key not in monthly_data:
+            monthly_data[month_key] = {
+                'display': local_created_at.strftime('%B %Y'),
+                'total': 0,
+                'expenses': [],
+            }
+        monthly_data[month_key]['total'] += expense.amount
+        monthly_data[month_key]['expenses'].append(expense)
+
+    monthly_list = sorted(monthly_data.items(), reverse=True)
+    total_expense = sum(group['total'] for _, group in monthly_list)
+
+    return render(request, 'expenses/list.html', {
+        'monthly_data': monthly_list,
+        'total_expense': total_expense,
+        'expense_count': sum(len(group['expenses']) for _, group in monthly_list),
+        'available_months': available_months,
+        'filters': {
+            'q': query,
+            'amount': amount,
+            'month': month,
+            'date': expense_date,
+        },
+    })
+
+
+def expense_create(request):
+    if request.method == 'POST':
+        form = ExpenseForm(request.POST)
+        if form.is_valid():
+            expense = form.save()
+            messages.success(request, f'Expense "{expense.title}" added successfully.')
+            return redirect('expense_list')
+        messages.error(request, 'Please correct the errors highlighted below.')
+    else:
+        form = ExpenseForm()
+
+    return render(request, 'expenses/form.html', {'form': form})
+
+
+@require_POST
+def expense_delete(request, pk):
+    expense = get_object_or_404(Expense, pk=pk)
+    title = expense.title
+    expense.delete()
+    messages.success(request, f'Expense "{title}" deleted successfully.')
+    return redirect('expense_list')
 
 
 def live_search_bills(request):

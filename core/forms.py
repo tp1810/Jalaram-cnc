@@ -1,6 +1,6 @@
 from django import forms
 from django.forms import inlineformset_factory
-from .models import Customer, Bill, BillItem
+from .models import Bill, BillItem, Customer, Expense
 
 
 class CustomerForm(forms.ModelForm):
@@ -168,3 +168,33 @@ BillItemFormSet = inlineformset_factory(
     validate_min=True,
     can_delete=True,
 )
+
+
+class ExpenseForm(forms.ModelForm):
+    class Meta:
+        model = Expense
+        fields = ['title', 'amount', 'notes']
+        widgets = {
+            'title': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g. Material purchase, electricity bill',
+                'autofocus': True,
+            }),
+            'amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '1',
+                'step': '1',
+                'placeholder': '0',
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'Optional details about this expense...',
+            }),
+        }
+        labels = {
+            'amount': 'Amount (₹)',
+        }
+
+    def clean_title(self):
+        return self.cleaned_data['title'].strip()

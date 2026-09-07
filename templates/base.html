@@ -60,6 +60,19 @@
             <span>Create Bill</span>
         </a>
 
+        <div class="nav-section-label">Expenses</div>
+
+        <a href="{% url 'expense_list' %}"
+           class="nav-item {% if request.resolver_match.url_name == 'expense_list' %}active{% endif %}">
+            <i class="bi bi-wallet2"></i>
+            <span>All Expenses</span>
+        </a>
+        <a href="{% url 'expense_create' %}"
+           class="nav-item {% if request.resolver_match.url_name == 'expense_create' %}active{% endif %}">
+            <i class="bi bi-plus-circle"></i>
+            <span>Add Expense</span>
+        </a>
+
         <div class="nav-section-label">System</div>
 
         <a href="{% url 'system_health' %}"

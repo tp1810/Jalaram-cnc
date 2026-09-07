@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Expense — Jalaram CNC{% endblock %}
+{% block page_heading %}Add Expense{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-xl-7 col-lg-8">
+        <div class="d-flex align-items-center justify-content-between gap-3 mb-4">
+            <div>
+                <h2 class="mb-1">Add Expense</h2>
+                <p class="text-muted mb-0">Record a new business expense.</p>
+            </div>
+            <a href="{% url 'expense_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>All Expenses
+            </a>
+        </div>
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+            <div class="card card-custom">
+                <div class="card-header-custom">
+                    <h6 class="card-title-custom">
+                        <i class="bi bi-wallet2 me-2"></i>Expense Details
+                    </h6>
+                </div>
+                <div class="card-body p-4">
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-500" for="{{ form.title.id_for_label }}">
+                            {{ form.title.label }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.title }}
+                        {% if form.title.errors %}
+                        <div class="invalid-feedback d-block">{{ form.title.errors.as_text }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-500" for="{{ form.amount.id_for_label }}">
+                            {{ form.amount.label }} <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">₹</span>
+                            {{ form.amount }}
+                        </div>
+                        {% if form.amount.errors %}
+                        <div class="invalid-feedback d-block">{{ form.amount.errors.as_text }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-500" for="{{ form.notes.id_for_label }}">
+                            {{ form.notes.label }}
+                        </label>
+                        {{ form.notes }}
+                        {% if form.notes.errors %}
+                        <div class="invalid-feedback d-block">{{ form.notes.errors.as_text }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="alert alert-light border d-flex align-items-center mb-4" role="note">
+                        <i class="bi bi-calendar-check text-primary fs-5 me-3"></i>
+                        <span>The expense date and time will be recorded automatically when you save.</span>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{% url 'expense_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i>Save Expense
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

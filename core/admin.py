@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Customer, Bill, BillItem
+from .models import Bill, BillItem, Customer, Expense
 
 
 class BillItemInline(admin.TabularInline):
@@ -23,4 +23,12 @@ class BillAdmin(admin.ModelAdmin):
     list_filter = ['created_at']
     readonly_fields = ['bill_number']
     inlines = [BillItemInline]
+    ordering = ['-created_at']
+
+
+@admin.register(Expense)
+class ExpenseAdmin(admin.ModelAdmin):
+    list_display = ['title', 'amount', 'created_at']
+    search_fields = ['title', 'notes']
+    list_filter = ['created_at']
     ordering = ['-created_at']
