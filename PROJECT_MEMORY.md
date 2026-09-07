@@ -1,7 +1,7 @@
 # JALARAM CNC - PROJECT MEMORY & OPERATIONS
 
-**Last Updated**: September 6, 2026
-**Current Release**: 1.0.1
+**Last Updated**: September 7, 2026
+**Current Release**: 1.1.0
 **Project**: Jalaram CNC Bill Management System
 **Framework**: Django 6.0.5 / Python 3.14
 **Production Server**: Waitress on `127.0.0.1:8000`
@@ -140,7 +140,7 @@ pyinstaller==6.22.2
 ### Build command
 
 ```powershell
-.\build_installer.ps1 -Version 1.0.1
+.\build_installer.ps1 -Version 1.1.0
 ```
 
 Or run:
@@ -156,12 +156,14 @@ build_installer.bat
 1. Installs runtime requirements into `.venv` with `uv`.
 2. Installs the pinned PyInstaller build requirements.
 3. Runs `manage.py check`.
-4. Runs `collectstatic --clear`.
-5. Downloads WinSW 2.12.0 if it is not cached in `packaging/tools`.
-6. Runs PyInstaller using `packaging/JalaramCNC.spec`.
-7. Adds WinSW and `JalaramCNCService.xml` to the frozen output.
-8. Finds Inno Setup 6, installing it with `winget` when necessary.
-9. Compiles `packaging/installer.iss`.
+4. Verifies every model change has a committed migration with `makemigrations --check --dry-run`.
+5. Runs the complete `core` test suite.
+6. Runs `collectstatic --clear`.
+7. Downloads WinSW 2.12.0 if it is not cached in `packaging/tools`.
+8. Runs PyInstaller using `packaging/JalaramCNC.spec`.
+9. Adds WinSW and `JalaramCNCService.xml` to the frozen output.
+10. Finds Inno Setup 6, installing it with `winget` when necessary.
+11. Compiles `packaging/installer.iss`.
 
 PyInstaller command used by the script:
 
@@ -489,6 +491,18 @@ Calculated properties:
 | `quantity` | PositiveIntegerField | Default 1 |
 | `amount` | IntegerField | Whole rupees |
 
+### Expense
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | BigAutoField | Primary key |
+| `title` | CharField(200) | Required; stripped before save through the form |
+| `amount` | PositiveIntegerField | Whole rupees; minimum value 1 |
+| `notes` | TextField | Optional |
+| `created_at` | DateTimeField | Automatic expense date and time |
+
+Expenses were added by migration `core/migrations/0002_expense.py`. Development database migration was applied on September 7, 2026; installed and upgraded copies receive it through the existing installer migration step.
+
 All money values are integer rupees.
 
 ---
@@ -530,6 +544,14 @@ All money values are integer rupees.
 | `/bills/<pk>/edit/` | `bill_edit` | Edit bill |
 | `/bills/<pk>/delete/` | `bill_delete` | POST-only delete |
 
+### Expenses
+
+| URL | Name | Purpose |
+|---|---|---|
+| `/expenses/` | `expense_list` | Monthly-grouped expense register with filters and totals |
+| `/expenses/create/` | `expense_create` | Create an expense with automatic date/time |
+| `/expenses/<pk>/delete/` | `expense_delete` | POST-only expense delete |
+
 There is no `bill_print` or server-side `bill_pdf` route. PDF generation is browser-side through bundled html2pdf.js.
 
 ---
@@ -553,6 +575,18 @@ There is no `bill_print` or server-side `bill_pdf` route. PDF generation is brow
 - Calendar filter updates visible rows, count, and total due.
 - Clear resets both search and date.
 - Mobile layout keeps overflow inside the table.
+
+### Expenses
+
+- The sidebar contains **All Expenses** and **Add Expense** links.
+- Creating an expense requires a title and whole-rupee amount of at least 1; notes are optional.
+- Expense date and time use `created_at` and are recorded automatically on save.
+- The expense register groups records into collapsible months in descending order.
+- Every month shows its record count and subtotal; the page shows the filtered record count and grand total.
+- Filters can be combined: title/notes text search, exact amount, month dropdown, and calendar date.
+- Month grouping uses local time so it agrees with calendar-date filtering.
+- Deletion is available from the register, requires confirmation, and is enforced as POST-only.
+- There is no expense edit screen; the implemented scope is create, list/report, filter, and delete.
 
 ### PDF and print
 
@@ -601,12 +635,23 @@ Focused tests cover:
 - Unpaid Bills search/date controls.
 - Search by customer name, phone, and bill number.
 - Exclusion of fully paid bills from unpaid search.
+- Expense creation with automatic date/time and stripped titles.
+- Rejection of zero-value expenses.
+- Monthly expense grouping, record counts, subtotals, and grand total.
+- Combined title/notes, exact amount, month, and calendar-date expense filters.
+- POST-only expense deletion.
 - Backup worker launch before Waitress.
 - Backup only when no recent valid copy exists.
 
-Release 1.0.1 frozen validation includes:
+The current `core` suite contains 10 tests and passed after the expense feature was added. `makemigrations --check --dry-run` reports no model drift, and `manage.py check` reports no issues.
+
+Release 1.1.0 frozen validation includes:
 
 - Fresh migration and configuration creation.
+- Upgrade from a database containing only `core.0001_initial`.
+- Automatic application of `core.0002_expense` to the same SQLite file.
+- Preservation of existing customer and bill rows during the migration.
+- Packaged Expense list/create screens returning HTTP 200 and rendering saved expenses.
 - SQLite integrity and verified backup.
 - Dashboard and packaged static assets returning HTTP 200.
 - Main application screens returning HTTP 200.
@@ -632,6 +677,7 @@ Release 1.0.1 frozen validation includes:
 
 | Version/Date | Change |
 |---|---|
+| 1.1.0 - 2026-09-07 | Added Expense persistence and migration, Add Expense and monthly-grouped All Expenses screens, combined search/amount/month/date filters, dynamic filtered totals, POST-only deletion, sidebar/admin support, and regression tests. Build now fails when model changes lack a committed migration or tests fail. Verified in-place upgrade preserves existing customer/bill rows while applying `core.0002_expense`. |
 | 1.0.1 - 2026-09-05 | Removed failing Task Scheduler creation and delayed-auto startup. Waitress starts immediately; backup checks run in the background after 10 seconds and hourly thereafter. Added installer readiness verification. |
 | 1.0.0 - 2026-09-05 | Added PyInstaller/WinSW/Inno single-EXE deployment, `ProgramData` persistence, upgrade-safe database handling, offline assets, System Health backups, and packaged CLI diagnostics. |
 | 2026-09-05 | Added Unpaid Bills live search, date filter, dynamic visible count/total, mobile validation, and regression tests. |

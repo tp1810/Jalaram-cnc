@@ -1,6 +1,6 @@
 [project]
 name = "jalaram-cnc"
-version = "1.0.1"
+version = "1.1.0"
 description = "Offline billing system for Jalaram CNC Art & Craft"
 readme = "README.md"
 authors = [

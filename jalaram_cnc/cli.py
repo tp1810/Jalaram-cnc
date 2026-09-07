@@ -11,7 +11,7 @@ from contextlib import closing
 
 from jalaram_cnc.runtime_paths import CONFIG_FILE, DATA_DIR, DB_PATH, LOG_DIR, ensure_data_dirs
 
-APP_VERSION = '1.0.1'
+APP_VERSION = '1.1.0'
 BACKUP_INITIAL_DELAY_SECONDS = 10
 BACKUP_CHECK_INTERVAL_SECONDS = 60 * 60
 

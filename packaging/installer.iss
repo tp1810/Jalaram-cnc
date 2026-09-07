@@ -1,6 +1,6 @@
 #define MyAppName "Jalaram CNC"
 #ifndef MyAppVersion
-  #define MyAppVersion "1.0.1"
+  #define MyAppVersion "1.1.0"
 #endif
 #define MyAppPublisher "Jalaram CNC Art & Craft"
 #define MyAppExeName "JalaramCNC.exe"

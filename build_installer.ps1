@@ -1,5 +1,5 @@
 param(
-    [string]$Version = '1.0.1'
+    [string]$Version = '1.1.0'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -21,9 +21,15 @@ Write-Host '[1/7] Installing locked runtime and build dependencies...'
 uv pip install --python $Python -r requirements.txt
 uv pip install --python $Python -r requirements-build.txt
 
-Write-Host '[2/7] Collecting static files...'
+Write-Host '[2/7] Validating migrations, tests, and static files...'
 & $Python manage.py check
+if ($LASTEXITCODE -ne 0) { throw 'Django system check failed.' }
+& $Python manage.py makemigrations --check --dry-run
+if ($LASTEXITCODE -ne 0) { throw 'Model changes are missing a committed migration.' }
+& $Python manage.py test core --verbosity 1
+if ($LASTEXITCODE -ne 0) { throw 'Core tests failed.' }
 & $Python manage.py collectstatic --noinput --clear
+if ($LASTEXITCODE -ne 0) { throw 'Static file collection failed.' }
 
 Write-Host '[3/7] Downloading the pinned WinSW service wrapper...'
 if (-not (Test-Path $WinSW)) {
